@@ -8,6 +8,8 @@ use std::fmt::*;
 
 #[derive(Debug, Default)]
 pub struct World {
+    pub use_statements: Vec<String>,
+
     pub arenas: Vec<ArenaCore>,
     pub entities: Vec<EntityCore>,
 
@@ -18,6 +20,7 @@ pub struct World {
 
 impl Display for World {
     fn fmt(&self, f: &mut Formatter) -> Result {
+        self.use_statements.iter().for_each(|u| { writeln!(f, "{}", u).ok(); });
         writeln!(f, "use generative_ecs_2::ecs::*;\n").ok();
 
         writeln!(f, "{}", self.generate_world()).ok();

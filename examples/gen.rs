@@ -2,28 +2,15 @@ use generative_ecs_2::arenas::Arena;
 use generative_ecs_2::entities::Entity;
 use generative_ecs_2::lifetimes::*;
 use generative_ecs_2::worlds::World;
+use physics::*;
 
 fn main() {
     let target = "./examples/target.rs";
 
     let types = "#[derive(Debug, Default, Copy, Clone)]
-pub struct Position;
-#[derive(Debug, Default, Copy, Clone)]
-pub struct Velocity;
-#[derive(Debug, Default, Copy, Clone)]
-pub struct Temperature;
-#[derive(Debug, Default, Copy, Clone)]
 pub struct Population;
 #[derive(Debug, Default, Copy, Clone)]
-pub struct Time;
-#[derive(Debug, Default, Copy, Clone)]
-pub struct Area;
-#[derive(Debug, Default, Copy, Clone)]
 pub struct Albedo;
-#[derive(Debug, Default, Copy, Clone)]
-pub struct Mass;
-#[derive(Debug, Default, Copy, Clone)]
-pub struct Length;
 #[derive(Debug, Default, Copy, Clone)]
 pub struct Duration;
 
@@ -106,6 +93,8 @@ pub fn get_world() -> World {
     planet.add_child(&surface);
 
     let mut world = World::new();
+
+    world.use_statements.push("use physics::*;".to_string());
 
     world.insert_arena(system);
     world.insert_arena(body);

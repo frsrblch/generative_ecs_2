@@ -1,3 +1,4 @@
+use physics::*;
 use generative_ecs_2::ecs::*;
 
 #[derive(Debug, Default, Clone)]
@@ -260,23 +261,9 @@ pub struct BodyEntity {
 }
 
 #[derive(Debug, Default, Copy, Clone)]
-pub struct Position;
-#[derive(Debug, Default, Copy, Clone)]
-pub struct Velocity;
-#[derive(Debug, Default, Copy, Clone)]
-pub struct Temperature;
-#[derive(Debug, Default, Copy, Clone)]
 pub struct Population;
 #[derive(Debug, Default, Copy, Clone)]
-pub struct Time;
-#[derive(Debug, Default, Copy, Clone)]
-pub struct Area;
-#[derive(Debug, Default, Copy, Clone)]
 pub struct Albedo;
-#[derive(Debug, Default, Copy, Clone)]
-pub struct Mass;
-#[derive(Debug, Default, Copy, Clone)]
-pub struct Length;
 #[derive(Debug, Default, Copy, Clone)]
 pub struct Duration;
 
