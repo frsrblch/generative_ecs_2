@@ -113,7 +113,14 @@ impl World {
             .add_line(CodeLine::new(
                 0,
                 &format!(
-                    "let id = state.{e}.create(&mut alloc.{e}, entity.{e});",
+                    "let id = alloc.{e}.create();",
+                    e = entity.base.as_field_name(),
+                ),
+            ))
+            .add_line(CodeLine::new(
+                0,
+                &format!(
+                    "state.{e}.insert(&id, entity.{e});",
                     e = entity.base.as_field_name(),
                 ),
             ));
@@ -131,7 +138,15 @@ impl World {
                 ));
                 func = func.add_line(CodeLine::new(
                     1,
-                    &format!("let child = state.{c}.create(&mut alloc.{c}, {c});", c = c),
+                    &format!("let child_id = alloc.{c}.create();", c = c),
+                ));
+                func = func.add_line(CodeLine::new(
+                    1,
+                    &format!("state.{c}.insert(&child_id, {c});", c = c),
+                ));
+                func = func.add_line(CodeLine::new(
+                    1,
+                    &format!("state.{e}.{c}.insert(&id, Some(child_id.id()));", e = entity.base.as_field_name(), c = c),
                 ));
                 func.add_line(CodeLine::new(0, "}"))
             });
@@ -278,17 +293,18 @@ impl World {
             .with_fields(fields)
     }
 
-    pub fn generate_arena_impls(&self) -> Vec<Impl> {
-        self.arenas
-            .iter()
-            .map(|a| self.generate_arena_impl(a))
-            .collect()
-    }
+//    pub fn generate_arena_impls(&self) -> Vec<Impl> {
+//        self.arenas
+//            .iter()
+//            .map(|a| self.generate_arena_impl(a))
+//            .collect()
+//    }
 
     fn generate_arena_impl(&self, arena: &ArenaCore) -> Impl {
         let arena_impl = Impl::from(&self.generate_arena(arena).typ)
             .add_function(self.get_insert_function(arena))
-            .add_function(self.get_create_function(arena));
+//            .add_function(self.get_create_function(arena))
+            ;
 
         self.get_link_functions(&arena.name)
             .into_iter()

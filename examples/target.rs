@@ -14,14 +14,19 @@ impl World {
     pub fn create_body_entity(&mut self, entity: BodyEntity) -> Id<Body> {
         let (alloc, state) = self.split();
         
-        let id = state.body.create(&mut alloc.body, entity.body);
+        let id = alloc.body.create();
+        state.body.insert(&id, entity.body);
         
         if let Some(orbit) = entity.orbit {
-            let child = state.orbit.create(&mut alloc.orbit, orbit);
+            let child_id = alloc.orbit.create();
+            state.orbit.insert(&child_id, orbit);
+            state.body.orbit.insert(&id, Some(child_id.id()));
         }
         
         if let Some(surface) = entity.surface {
-            let child = state.surface.create(&mut alloc.surface, surface);
+            let child_id = alloc.surface.create();
+            state.surface.insert(&child_id, surface);
+            state.body.surface.insert(&id, Some(child_id.id()));
         }
         
         id
@@ -55,12 +60,6 @@ impl System {
         self.name.insert(id, row.name);
         self.position.insert(id, row.position);
     }
-
-    pub fn create(&mut self, allocator: &mut FixedAllocator<System>, row: SystemRow) -> Id<System> {
-        let id = allocator.create();
-        self.insert(&id, row);
-        id
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -89,12 +88,6 @@ impl Body {
         self.radius.insert(id, row.radius);
         self.orbit.insert(id, None);
         self.surface.insert(id, None);
-    }
-
-    pub fn create(&mut self, allocator: &mut FixedAllocator<Body>, row: BodyRow) -> Id<Body> {
-        let id = allocator.create();
-        self.insert(&id, row);
-        id
     }
 
     pub fn link_to_orbit(&mut self, id: &Id<Body>, child: &Id<Orbit>) {
@@ -130,12 +123,6 @@ impl Orbit {
         self.radius.insert(id, row.radius);
     }
 
-    pub fn create(&mut self, allocator: &mut FixedAllocator<Orbit>, row: OrbitRow) -> Id<Orbit> {
-        let id = allocator.create();
-        self.insert(&id, row);
-        id
-    }
-
     pub fn link_to_body(&mut self, parent: &Id<Body>, child: &Id<Orbit>) {
         self.body.insert(child, parent.id());
     }
@@ -160,12 +147,6 @@ impl Surface {
     fn insert(&mut self, id: &Id<Surface>, row: SurfaceRow) {
         self.area.insert(id, row.area);
         self.albedo.insert(id, row.albedo);
-    }
-
-    pub fn create(&mut self, allocator: &mut FixedAllocator<Surface>, row: SurfaceRow) -> Id<Surface> {
-        let id = allocator.create();
-        self.insert(&id, row);
-        id
     }
 
     pub fn link_to_body(&mut self, parent: &Id<Body>, child: &Id<Surface>) {
