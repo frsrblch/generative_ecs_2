@@ -1,5 +1,5 @@
-use code_gen::Type;
 use crate::arenas::ArenaName;
+use code_gen::Type;
 
 pub trait Lifetime: Default {
     fn id_type(arena: &ArenaName) -> Type;
@@ -40,4 +40,3 @@ impl Lifetime for Transient {
         format!("GenAllocator<{}>", arena).parse().unwrap()
     }
 }
-

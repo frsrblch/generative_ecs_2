@@ -1,7 +1,7 @@
 use crate::arenas::*;
 use crate::lifetimes::*;
-use std::marker::PhantomData;
 use code_gen::CamelCase;
+use std::marker::PhantomData;
 
 //	From	    To	        Relationsh	Use Case	                                        Example
 //	Permanent	Permanent	MaybeOwns	A -> Opt<B>	                                        not all bodies have an atmosphere
@@ -28,7 +28,7 @@ use code_gen::CamelCase;
 #[derive(Debug)]
 pub struct EntityCore {
     pub base: ArenaName,
-    pub children: Vec<ArenaName>, // one to maybe one
+    pub children: Vec<ArenaName>,    // one to maybe one
     pub collections: Vec<ArenaName>, // one to many
 }
 
@@ -60,7 +60,7 @@ impl<L: Lifetime> Entity<L> {
         }
     }
 
-    pub fn get_arenas(&self) -> impl Iterator<Item=&ArenaName> {
+    pub fn get_arenas(&self) -> impl Iterator<Item = &ArenaName> {
         std::iter::once(&self.entity.base)
             .chain(self.entity.children.iter())
             .chain(self.entity.collections.iter())
