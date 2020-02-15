@@ -6,7 +6,8 @@ use generative_ecs_2::worlds::World;
 fn main() {
     let target = "./examples/target.rs";
 
-    let types = "#[derive(Debug, Default, Copy, Clone)] pub struct Position;
+    let types = "#[derive(Debug, Default, Copy, Clone)]
+pub struct Position;
 #[derive(Debug, Default, Copy, Clone)]
 pub struct Velocity;
 #[derive(Debug, Default, Copy, Clone)]
@@ -110,10 +111,10 @@ pub fn get_world() -> World {
     world.insert_arena(body);
     world.insert_arena(orbit);
     world.insert_arena(surface);
-    //    world.insert_arena(nation);
-    //    world.insert_arena(colony);
-    //    world.insert_arena(vessel);
-    //    world.insert_arena(transit);
+    world.insert_arena(nation);
+    world.insert_arena(colony);
+    world.insert_arena(vessel);
+    world.insert_arena(transit);
 
     world.insert_entity(planet);
 

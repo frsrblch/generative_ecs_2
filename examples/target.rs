@@ -11,7 +11,7 @@ impl World {
         (&mut self.allocators, &mut self.state)
     }
 
-    pub fn create_body_entity(&mut self, entity: BodyEntity) -> Id<Body> {
+    pub fn create_body(&mut self, entity: BodyEntity) -> Id<Body> {
         let (alloc, state) = self.split();
         
         let id = alloc.body.create();
@@ -20,13 +20,17 @@ impl World {
         if let Some(orbit) = entity.orbit {
             let child_id = alloc.orbit.create();
             state.orbit.insert(&child_id, orbit);
+
             state.body.orbit.insert(&id, Some(child_id.id()));
+            state.orbit.body.insert(&child_id, id.id());
         }
         
         if let Some(surface) = entity.surface {
             let child_id = alloc.surface.create();
             state.surface.insert(&child_id, surface);
+
             state.body.surface.insert(&id, Some(child_id.id()));
+            state.surface.body.insert(&child_id, id.id());
         }
         
         id
@@ -39,6 +43,10 @@ pub struct Allocators {
     pub body: FixedAllocator<Body>,
     pub orbit: FixedAllocator<Orbit>,
     pub surface: FixedAllocator<Surface>,
+    pub nation: GenAllocator<Nation>,
+    pub colony: GenAllocator<Colony>,
+    pub vessel: GenAllocator<Vessel>,
+    pub transit: GenAllocator<Transit>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -47,6 +55,10 @@ pub struct State {
     pub body: Body,
     pub orbit: Orbit,
     pub surface: Surface,
+    pub nation: Nation,
+    pub colony: Colony,
+    pub vessel: Vessel,
+    pub transit: Transit,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -56,7 +68,7 @@ pub struct System {
 }
 
 impl System {
-    fn insert(&mut self, id: &Id<System>, row: SystemRow) {
+    pub fn insert(&mut self, id: &Id<System>, row: SystemRow) {
         self.name.insert(id, row.name);
         self.position.insert(id, row.position);
     }
@@ -81,21 +93,15 @@ pub struct Body {
 }
 
 impl Body {
-    fn insert(&mut self, id: &Id<Body>, row: BodyRow) {
+    pub fn insert(&mut self, id: &Id<Body>, row: BodyRow) {
         self.system.insert(id, row.system);
         self.name.insert(id, row.name);
         self.mass.insert(id, row.mass);
         self.radius.insert(id, row.radius);
+        self.position.insert(id, Default::default());
+        self.velocity.insert(id, Default::default());
         self.orbit.insert(id, None);
         self.surface.insert(id, None);
-    }
-
-    pub fn link_to_orbit(&mut self, id: &Id<Body>, child: &Id<Orbit>) {
-        self.orbit.insert(id, Some(child.id()));
-    }
-
-    pub fn link_to_surface(&mut self, id: &Id<Body>, child: &Id<Surface>) {
-        self.surface.insert(id, Some(child.id()));
     }
 }
 
@@ -117,14 +123,11 @@ pub struct Orbit {
 }
 
 impl Orbit {
-    fn insert(&mut self, id: &Id<Orbit>, row: OrbitRow) {
+    pub fn insert(&mut self, id: &Id<Orbit>, row: OrbitRow) {
         self.parent.insert(id, row.parent);
         self.period.insert(id, row.period);
         self.radius.insert(id, row.radius);
-    }
-
-    pub fn link_to_body(&mut self, parent: &Id<Body>, child: &Id<Orbit>) {
-        self.body.insert(child, parent.id());
+        self.relative_position.insert(id, Default::default());
     }
 }
 
@@ -144,13 +147,10 @@ pub struct Surface {
 }
 
 impl Surface {
-    fn insert(&mut self, id: &Id<Surface>, row: SurfaceRow) {
+    pub fn insert(&mut self, id: &Id<Surface>, row: SurfaceRow) {
         self.area.insert(id, row.area);
         self.albedo.insert(id, row.albedo);
-    }
-
-    pub fn link_to_body(&mut self, parent: &Id<Body>, child: &Id<Surface>) {
-        self.body.insert(child, parent.id());
+        self.temperature.insert(id, Default::default());
     }
 }
 
@@ -160,6 +160,98 @@ pub struct SurfaceRow {
     pub albedo: Albedo,
 }
 
+#[derive(Debug, Default, Clone)]
+pub struct Nation {
+    pub name: Component<Self, String>,
+    pub population: Component<Self, Population>,
+}
+
+impl Nation {
+    pub fn insert(&mut self, id: &Valid<Nation>, row: NationRow) {
+        self.name.insert(id, row.name);
+        self.population.insert(id, Default::default());
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct NationRow {
+    pub name: String,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct Colony {
+    pub body: Component<Self, Id<Body>>,
+    pub nation: Component<Self, GenId<Nation>>,
+    pub name: Component<Self, String>,
+    pub population: Component<Self, Population>,
+}
+
+impl Colony {
+    pub fn insert(&mut self, id: &Valid<Colony>, row: ColonyRow) {
+        self.body.insert(id, row.body);
+        self.nation.insert(id, row.nation);
+        self.name.insert(id, row.name);
+        self.population.insert(id, row.population);
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ColonyRow {
+    pub body: Id<Body>,
+    pub nation: GenId<Nation>,
+    pub name: String,
+    pub population: Population,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct Vessel {
+    pub name: Component<Self, String>,
+    pub mass: Component<Self, Mass>,
+}
+
+impl Vessel {
+    pub fn insert(&mut self, id: &Valid<Vessel>, row: VesselRow) {
+        self.name.insert(id, row.name);
+        self.mass.insert(id, row.mass);
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct VesselRow {
+    pub name: String,
+    pub mass: Mass,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct Transit {
+    pub departure: Component<Self, Time>,
+    pub arrival: Component<Self, Time>,
+    pub position: Component<Self, Position>,
+    pub vessel: Component<Self, GenId<Vessel>>,
+    pub from: Component<Self, Id<Body>>,
+    pub to: Component<Self, Id<Body>>,
+}
+
+impl Transit {
+    pub fn insert(&mut self, id: &Valid<Transit>, row: TransitRow) {
+        self.departure.insert(id, row.departure);
+        self.arrival.insert(id, row.arrival);
+        self.vessel.insert(id, row.vessel);
+        self.from.insert(id, row.from);
+        self.to.insert(id, row.to);
+        self.position.insert(id, Default::default());
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct TransitRow {
+    pub departure: Time,
+    pub arrival: Time,
+    pub vessel: GenId<Vessel>,
+    pub from: Id<Body>,
+    pub to: Id<Body>,
+}
+
 #[derive(Debug, Clone)]
 pub struct BodyEntity {
     pub body: BodyRow,
@@ -167,7 +259,8 @@ pub struct BodyEntity {
     pub surface: Option<SurfaceRow>,
 }
 
-#[derive(Debug, Default, Copy, Clone)] pub struct Position;
+#[derive(Debug, Default, Copy, Clone)]
+pub struct Position;
 #[derive(Debug, Default, Copy, Clone)]
 pub struct Velocity;
 #[derive(Debug, Default, Copy, Clone)]

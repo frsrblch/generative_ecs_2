@@ -105,7 +105,7 @@ impl World {
     }
 
     fn generate_entity_function(&self, entity: &EntityCore) -> Function {
-        let func = Function::new(&format!("create_{}_entity", entity.base.as_field_name()))
+        let func = Function::new(&format!("create_{}", entity.base.as_field_name()))
             .with_parameters(&format!("&mut self, entity: {}", entity.name()))
             .with_return(self.get_valid_id(&entity.base).to_string())
             .add_line(CodeLine::new(0, "let (alloc, state) = self.split();"))
@@ -142,11 +142,23 @@ impl World {
                 ));
                 func = func.add_line(CodeLine::new(
                     1,
-                    &format!("state.{c}.insert(&child_id, {c});", c = c),
+                    &format!("state.{c}.insert(&child_id, {c});\n", c = c),
                 ));
                 func = func.add_line(CodeLine::new(
                     1,
-                    &format!("state.{e}.{c}.insert(&id, Some(child_id.id()));", e = entity.base.as_field_name(), c = c),
+                    &format!(
+                        "state.{e}.{c}.insert(&id, Some(child_id.id()));",
+                        e = entity.base.as_field_name(),
+                        c = c
+                    ),
+                ));
+                func = func.add_line(CodeLine::new(
+                    1,
+                    &format!(
+                        "state.{c}.{e}.insert(&child_id, id.id());",
+                        e = entity.base.as_field_name(),
+                        c = c
+                    ),
                 ));
                 func.add_line(CodeLine::new(0, "}"))
             });
@@ -292,33 +304,16 @@ impl World {
             .with_derives(Derives::with_debug_clone())
             .with_fields(fields)
     }
-
-//    pub fn generate_arena_impls(&self) -> Vec<Impl> {
-//        self.arenas
-//            .iter()
-//            .map(|a| self.generate_arena_impl(a))
-//            .collect()
-//    }
-
     fn generate_arena_impl(&self, arena: &ArenaCore) -> Impl {
-        let arena_impl = Impl::from(&self.generate_arena(arena).typ)
-            .add_function(self.get_insert_function(arena))
-//            .add_function(self.get_create_function(arena))
-            ;
-
-        self.get_link_functions(&arena.name)
-            .into_iter()
-            .fold(arena_impl, |i, f| i.add_function(f))
+        Impl::from(&self.generate_arena(arena).typ).add_function(self.get_insert_function(arena))
     }
 
     fn get_insert_function(&self, arena: &ArenaCore) -> Function {
-        let mut func = Function::new("insert")
-            .with_visibility(Visibility::Private)
-            .with_parameters(&format!(
-                "&mut self, id: &{}, row: {}",
-                self.get_valid_id(&arena.name),
-                self.generate_arena_row(arena).typ,
-            ));
+        let mut func = Function::new("insert").with_parameters(&format!(
+            "&mut self, id: &{}, row: {}",
+            self.get_valid_id(&arena.name),
+            self.generate_arena_row(arena).typ,
+        ));
 
         for field in self.generate_arena_row(arena).fields {
             func = func.add_line(CodeLine::new(
@@ -326,6 +321,17 @@ impl World {
                 &format!("self.{}.insert(id, row.{});", field.name, field.name),
             ));
         }
+
+        let mut func = arena
+            .components
+            .iter()
+            .filter(|c| c.source == Source::ByDefault)
+            .fold(func, |func, comp| {
+                func.add_line(CodeLine::new(
+                    0,
+                    &format!("self.{}.insert(id, Default::default());", comp.field_name)
+                ))
+            });
 
         for (field, _arena) in arena.optional_refs.iter() {
             func = func.add_line(CodeLine::new(
@@ -346,57 +352,44 @@ impl World {
         func
     }
 
-    fn get_create_function(&self, arena: &ArenaCore) -> Function {
-        Function::new("create")
-            .with_parameters(&format!(
-                "&mut self, allocator: &mut {}, row: {}",
-                self.get_allocator(&arena.name),
-                self.generate_arena_row(arena).typ
-            ))
-            .with_return(self.get_valid_id(&arena.name).to_string())
-            .add_line(CodeLine::new(0, "let id = allocator.create();"))
-            .add_line(CodeLine::new(0, "self.insert(&id, row);"))
-            .add_line(CodeLine::new(0, "id"))
-    }
-
-    fn get_link_functions(&self, arena: &ArenaName) -> Vec<Function> {
-        if let Some(entity) = self.get_entity(arena) {
-            entity
-                .children
-                .iter()
-                .map(|c| {
-                    Function::new(&format!("link_to_{}", c.as_field_name()))
-                        .with_parameters(&format!(
-                            "&mut self, id: &{}, child: &{}",
-                            self.get_valid_id(arena),
-                            self.get_valid_id(c)
-                        ))
-                        .add_line(CodeLine::new(
-                            0,
-                            &format!("self.{}.insert(id, Some(child.id()));", c.as_field_name()),
-                        ))
-                })
-                .collect()
-        } else {
-            self.get_parent_entities(arena)
-                .map(|e| {
-                    let parent_field = e.base.as_field_name();
-                    let parent_id = self.get_valid_id(&e.base);
-                    let self_id = self.get_valid_id(arena);
-
-                    Function::new(&format!("link_to_{}", parent_field))
-                        .with_parameters(&format!(
-                            "&mut self, parent: &{}, child: &{}",
-                            parent_id, self_id
-                        ))
-                        .add_line(CodeLine::new(
-                            0,
-                            &format!("self.{}.insert(child, parent.id());", parent_field,),
-                        ))
-                })
-                .collect()
-        }
-    }
+    //    fn get_link_functions(&self, arena: &ArenaName) -> Vec<Function> {
+    //        if let Some(entity) = self.get_entity(arena) {
+    //            entity
+    //                .children
+    //                .iter()
+    //                .map(|c| {
+    //                    Function::new(&format!("link_to_{}", c.as_field_name()))
+    //                        .with_parameters(&format!(
+    //                            "&mut self, id: &{}, child: &{}",
+    //                            self.get_valid_id(arena),
+    //                            self.get_valid_id(c)
+    //                        ))
+    //                        .add_line(CodeLine::new(
+    //                            0,
+    //                            &format!("self.{}.insert(id, Some(child.id()));", c.as_field_name()),
+    //                        ))
+    //                })
+    //                .collect()
+    //        } else {
+    //            self.get_parent_entities(arena)
+    //                .map(|e| {
+    //                    let parent_field = e.base.as_field_name();
+    //                    let parent_id = self.get_valid_id(&e.base);
+    //                    let self_id = self.get_valid_id(arena);
+    //
+    //                    Function::new(&format!("link_to_{}", parent_field))
+    //                        .with_parameters(&format!(
+    //                            "&mut self, parent: &{}, child: &{}",
+    //                            parent_id, self_id
+    //                        ))
+    //                        .add_line(CodeLine::new(
+    //                            0,
+    //                            &format!("self.{}.insert(child, parent.id());", parent_field,),
+    //                        ))
+    //                })
+    //                .collect()
+    //        }
+    //    }
 
     pub fn get_arena(&self, arena: &ArenaName) -> &ArenaCore {
         self.arenas.iter().find(|a| a.name == *arena).unwrap()
