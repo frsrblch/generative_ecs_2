@@ -142,7 +142,7 @@ impl<L: Lifetime> Arena<L> {
         });
     }
 
-    pub fn add_optional_component_with_field<A: Any>(&mut self, field: &str) {
+    pub fn add_optional_component_with_field<A>(&mut self, field: &str) {
         let type_name = std::any::type_name::<A>().split("::").last().unwrap();
 
         self.arena.components.push(Component {
@@ -174,7 +174,7 @@ impl<L: Lifetime> Arena<L> {
         });
     }
 
-    pub fn add_default_component_with_field<A: Any + Default>(&mut self, field: &str) {
+    pub fn add_default_component_with_field<A: Default>(&mut self, field: &str) {
         let type_name = std::any::type_name::<A>().split("::").last().unwrap();
 
         self.arena.components.push(Component {
@@ -254,7 +254,7 @@ impl<L: Lifetime> Arena<L> {
         self.arena.name.clone()
     }
 
-    fn get_type_name<A: Any>() -> &'static str {
+    fn get_type_name<A>() -> &'static str {
         std::any::type_name::<A>().split("::").last().unwrap()
     }
 }

@@ -4,6 +4,7 @@ use crate::lifetimes::*;
 use code_gen::Visibility::Pub;
 use code_gen::*;
 use std::collections::HashMap;
+use std::fmt::*;
 
 #[derive(Debug, Default)]
 pub struct World {
@@ -402,7 +403,7 @@ mod tests {
             .iter()
             .for_each(|a| println!("{}\n{}", a.0, a.1));
 
-        assert!(false);
+        //        assert!(false);
     }
 
     #[test]
