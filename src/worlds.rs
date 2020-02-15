@@ -311,6 +311,22 @@ impl World {
             ));
         }
 
+        for (field, _arena) in arena.optional_refs.iter() {
+            func = func.add_line(CodeLine::new(
+                0,
+                &format!("self.{}.insert(id, None);", field),
+            ));
+        }
+
+        if let Some(entity) = self.get_entity(&arena.name) {
+            for c in entity.children.iter() {
+                func = func.add_line(CodeLine::new(
+                    0,
+                    &format!("self.{}.insert(id, None);", c.as_field_name()),
+                ));
+            }
+        }
+
         func
     }
 

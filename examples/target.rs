@@ -13,17 +13,17 @@ impl World {
 
     pub fn create_body_entity(&mut self, entity: BodyEntity) -> Id<Body> {
         let (alloc, state) = self.split();
-
+        
         let id = state.body.create(&mut alloc.body, entity.body);
-
+        
         if let Some(orbit) = entity.orbit {
             let child = state.orbit.create(&mut alloc.orbit, orbit);
         }
-
+        
         if let Some(surface) = entity.surface {
             let child = state.surface.create(&mut alloc.surface, surface);
         }
-
+        
         id
     }
 }
@@ -87,6 +87,8 @@ impl Body {
         self.name.insert(id, row.name);
         self.mass.insert(id, row.mass);
         self.radius.insert(id, row.radius);
+        self.orbit.insert(id, None);
+        self.surface.insert(id, None);
     }
 
     pub fn create(&mut self, allocator: &mut FixedAllocator<Body>, row: BodyRow) -> Id<Body> {
@@ -160,11 +162,7 @@ impl Surface {
         self.albedo.insert(id, row.albedo);
     }
 
-    pub fn create(
-        &mut self,
-        allocator: &mut FixedAllocator<Surface>,
-        row: SurfaceRow,
-    ) -> Id<Surface> {
+    pub fn create(&mut self, allocator: &mut FixedAllocator<Surface>, row: SurfaceRow) -> Id<Surface> {
         let id = allocator.create();
         self.insert(&id, row);
         id
@@ -188,8 +186,7 @@ pub struct BodyEntity {
     pub surface: Option<SurfaceRow>,
 }
 
-#[derive(Debug, Default, Copy, Clone)]
-pub struct Position;
+#[derive(Debug, Default, Copy, Clone)] pub struct Position;
 #[derive(Debug, Default, Copy, Clone)]
 pub struct Velocity;
 #[derive(Debug, Default, Copy, Clone)]
