@@ -131,10 +131,7 @@ impl World {
                 ));
                 func = func.add_line(CodeLine::new(
                     1,
-                    &format!(
-                        "let child = state.{c}.create(&mut alloc.{c}, {c});",
-                        c = c
-                    ),
+                    &format!("let child = state.{c}.create(&mut alloc.{c}, {c});", c = c),
                 ));
                 func.add_line(CodeLine::new(0, "}"))
             });
@@ -164,7 +161,13 @@ impl World {
     pub fn generate_arenas(&self) -> Vec<(Struct, Impl, Struct)> {
         self.arenas
             .iter()
-            .map(|a| (self.generate_arena(a), self.generate_arena_impl(a), self.generate_arena_row(a)))
+            .map(|a| {
+                (
+                    self.generate_arena(a),
+                    self.generate_arena_impl(a),
+                    self.generate_arena_row(a),
+                )
+            })
             .collect()
     }
 
@@ -314,7 +317,7 @@ impl World {
     fn get_create_function(&self, arena: &ArenaCore) -> Function {
         Function::new("create")
             .with_parameters(&format!(
-                "\n        &mut self,\n        allocator: &mut {},\n        row: {}\n    ",
+                "&mut self, allocator: &mut {}, row: {}",
                 self.get_allocator(&arena.name),
                 self.generate_arena_row(arena).typ
             ))

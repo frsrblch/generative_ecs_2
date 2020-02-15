@@ -56,11 +56,7 @@ impl System {
         self.position.insert(id, row.position);
     }
 
-    pub fn create(
-        &mut self,
-        allocator: &mut FixedAllocator<System>,
-        row: SystemRow
-    ) -> Id<System> {
+    pub fn create(&mut self, allocator: &mut FixedAllocator<System>, row: SystemRow) -> Id<System> {
         let id = allocator.create();
         self.insert(&id, row);
         id
@@ -93,11 +89,7 @@ impl Body {
         self.radius.insert(id, row.radius);
     }
 
-    pub fn create(
-        &mut self,
-        allocator: &mut FixedAllocator<Body>,
-        row: BodyRow
-    ) -> Id<Body> {
+    pub fn create(&mut self, allocator: &mut FixedAllocator<Body>, row: BodyRow) -> Id<Body> {
         let id = allocator.create();
         self.insert(&id, row);
         id
@@ -136,11 +128,7 @@ impl Orbit {
         self.radius.insert(id, row.radius);
     }
 
-    pub fn create(
-        &mut self,
-        allocator: &mut FixedAllocator<Orbit>,
-        row: OrbitRow
-    ) -> Id<Orbit> {
+    pub fn create(&mut self, allocator: &mut FixedAllocator<Orbit>, row: OrbitRow) -> Id<Orbit> {
         let id = allocator.create();
         self.insert(&id, row);
         id
@@ -172,11 +160,7 @@ impl Surface {
         self.albedo.insert(id, row.albedo);
     }
 
-    pub fn create(
-        &mut self,
-        allocator: &mut FixedAllocator<Surface>,
-        row: SurfaceRow
-    ) -> Id<Surface> {
+    pub fn create(&mut self, allocator: &mut FixedAllocator<Surface>, row: SurfaceRow) -> Id<Surface> {
         let id = allocator.create();
         self.insert(&id, row);
         id
