@@ -7,15 +7,24 @@ fn main() {
     let target = "./examples/target.rs";
 
     let types = "#[derive(Debug, Default, Copy, Clone)] pub struct Position;
-#[derive(Debug, Default, Copy, Clone)] pub struct Velocity;
-#[derive(Debug, Default, Copy, Clone)] pub struct Temperature;
-#[derive(Debug, Default, Copy, Clone)] pub struct Population;
-#[derive(Debug, Default, Copy, Clone)] pub struct Time;
-#[derive(Debug, Default, Copy, Clone)] pub struct Area;
-#[derive(Debug, Default, Copy, Clone)] pub struct Albedo;
-#[derive(Debug, Default, Copy, Clone)] pub struct Mass;
-#[derive(Debug, Default, Copy, Clone)] pub struct Length;
-#[derive(Debug, Default, Copy, Clone)] pub struct Duration;
+#[derive(Debug, Default, Copy, Clone)]
+pub struct Velocity;
+#[derive(Debug, Default, Copy, Clone)]
+pub struct Temperature;
+#[derive(Debug, Default, Copy, Clone)]
+pub struct Population;
+#[derive(Debug, Default, Copy, Clone)]
+pub struct Time;
+#[derive(Debug, Default, Copy, Clone)]
+pub struct Area;
+#[derive(Debug, Default, Copy, Clone)]
+pub struct Albedo;
+#[derive(Debug, Default, Copy, Clone)]
+pub struct Mass;
+#[derive(Debug, Default, Copy, Clone)]
+pub struct Length;
+#[derive(Debug, Default, Copy, Clone)]
+pub struct Duration;
 
 fn main() {}\n";
 
