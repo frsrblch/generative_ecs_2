@@ -1,6 +1,6 @@
 use crate::ecs::ids::{Id, Valid};
 use rayon::iter::*;
-use std::any::{type_name};
+use std::any::type_name;
 use std::marker::PhantomData;
 use std::ops::{Index, IndexMut};
 
@@ -96,46 +96,41 @@ impl<'a, ID: Send, T: Send + Sync> IntoParallelIterator for &'a mut Component<ID
     }
 }
 
-#[test]
-fn iter() {
-    let mut a = Component::<(), usize>::default();
-    let mut b = Component::<(), usize>::default();
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    for i in 0..10 {
-        a.insert_unchecked(i, i);
-        b.insert_unchecked(i, 20 - i);
-    }
+    #[test]
+    fn iter() {
+        let mut a = Component::<(), usize>::default();
+        let mut b = Component::<(), usize>::default();
 
-    a.iter_mut()
-        .zip(b.iter())
-        .for_each(|(a, b)| {
+        for i in 0..10 {
+            a.insert_unchecked(i, i);
+            b.insert_unchecked(i, 20 - i);
+        }
+
+        a.iter_mut().zip(b.iter()).for_each(|(a, b)| {
             *a += *b;
         });
 
-    a.iter()
-        .for_each(|a| println!("{}", a));
-
-    assert!(false);
-}
-
-#[test]
-fn par_iter() {
-    let mut a = Component::<(), usize>::default();
-    let mut b = Component::<(), usize>::default();
-
-    for i in 0..10 {
-        a.insert_unchecked(i, i);
-        b.insert_unchecked(i, 20 - i);
+        a.iter().for_each(|a| assert_eq!(20, *a));
     }
 
-    a.par_iter_mut()
-        .zip(b.par_iter())
-        .for_each(|(a, b)| {
+    #[test]
+    fn par_iter() {
+        let mut a = Component::<(), usize>::default();
+        let mut b = Component::<(), usize>::default();
+
+        for i in 0..10 {
+            a.insert_unchecked(i, i);
+            b.insert_unchecked(i, 20 - i);
+        }
+
+        a.par_iter_mut().zip(b.par_iter()).for_each(|(a, b)| {
             *a += *b;
         });
 
-    a.values.iter()
-        .for_each(|a| println!("{}", a));
-
-    assert!(false);
+        a.iter().for_each(|a| assert_eq!(20, *a));
+    }
 }

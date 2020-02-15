@@ -70,13 +70,11 @@ impl<T> GenAllocator<T> {
         }
     }
 
-    pub fn ids<'a>(&'a self) -> impl Iterator<Item=Valid<T>> + 'a {
-        self.living
-            .iter()
-            .map(move |index| {
-                let gen = self.generation[index];
-                let id = GenId::new(index, gen);
-                Valid::new(id)
-            })
+    pub fn ids<'a>(&'a self) -> impl Iterator<Item = Valid<T>> + 'a {
+        self.living.iter().map(move |index| {
+            let gen = self.generation[index];
+            let id = GenId::new(index, gen);
+            Valid::new(id)
+        })
     }
 }

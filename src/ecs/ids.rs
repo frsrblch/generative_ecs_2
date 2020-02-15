@@ -155,7 +155,7 @@ impl<T> Ord for GenId<T> {
 
 #[derive(Debug)]
 pub struct Valid<'a, T> {
-    pub (crate) id: GenId<T>,
+    pub(crate) id: GenId<T>,
     marker: PhantomData<&'a ()>,
 }
 
