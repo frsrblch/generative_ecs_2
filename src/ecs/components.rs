@@ -8,10 +8,19 @@ pub trait Insert<ID, T> {
     fn insert(&mut self, id: &ID, value: T);
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct Component<ID, T> {
     values: Vec<T>,
     marker: PhantomData<ID>,
+}
+
+impl<ID, T> Default for Component<ID, T> {
+    fn default() -> Self {
+        Self {
+            values: vec![],
+            marker: PhantomData,
+        }
+    }
 }
 
 impl<ID, T> Component<ID, T> {

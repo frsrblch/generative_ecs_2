@@ -16,6 +16,30 @@ pub struct World {
     pub valid_id: HashMap<ArenaName, Type>,
 }
 
+impl Display for World {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        writeln!(f, "use generative_ecs_2::ecs::*;\n").ok();
+
+        writeln!(f, "{}", self.generate_world()).ok();
+        writeln!(f, "{}", self.generate_world_impl()).ok();
+
+        writeln!(f, "{}", self.generate_allocators()).ok();
+        writeln!(f, "{}", self.generate_state()).ok();
+
+        for (arena, arena_impl, row) in self.generate_arenas() {
+            writeln!(f, "{}", arena).ok();
+            writeln!(f, "{}", arena_impl).ok();
+            writeln!(f, "{}", row).ok();
+        }
+
+        for entity in self.generate_entities() {
+            writeln!(f, "{}", entity).ok();
+        }
+
+        Ok(())
+    }
+}
+
 impl World {
     pub fn new() -> Self {
         Default::default()
@@ -94,7 +118,7 @@ impl World {
                 ),
             ));
 
-        entity
+        let mut func = entity
             .children
             .iter()
             .map(|child| self.get_arena(child))
@@ -108,12 +132,16 @@ impl World {
                 func = func.add_line(CodeLine::new(
                     1,
                     &format!(
-                        "let child = state.{c}.create(&mut alloc.{c}, entity.{c})",
+                        "let child = state.{c}.create(&mut alloc.{c}, {c});",
                         c = c
                     ),
                 ));
                 func.add_line(CodeLine::new(0, "}"))
-            })
+            });
+
+        func = func.add_line(CodeLine::new(0, ""));
+
+        func.add_line(CodeLine::new(0, "id"))
     }
 
     pub fn generate_allocators(&self) -> Struct {
@@ -133,10 +161,10 @@ impl World {
             .with_fields(fields)
     }
 
-    pub fn generate_arenas(&self) -> Vec<(Struct, Impl)> {
+    pub fn generate_arenas(&self) -> Vec<(Struct, Impl, Struct)> {
         self.arenas
             .iter()
-            .map(|a| (self.generate_arena(a), self.generate_arena_impl(a)))
+            .map(|a| (self.generate_arena(a), self.generate_arena_impl(a), self.generate_arena_row(a)))
             .collect()
     }
 
@@ -276,7 +304,7 @@ impl World {
         for field in self.generate_arena_row(arena).fields {
             func = func.add_line(CodeLine::new(
                 0,
-                &format!("self.{}.insert(id, row.{})", field.name, field.name),
+                &format!("self.{}.insert(id, row.{});", field.name, field.name),
             ));
         }
 
@@ -370,7 +398,7 @@ const ALLOCATORS: &'static str = "Allocators";
 const STATE: &'static str = "State";
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
 
     #[test]
