@@ -6,6 +6,8 @@ use code_gen::*;
 use std::collections::HashMap;
 use std::fmt::*;
 
+// TODO create_x methods for non-entity arenas
+
 #[derive(Debug, Default)]
 pub struct World {
     pub use_statements: Vec<String>,
@@ -20,7 +22,9 @@ pub struct World {
 
 impl Display for World {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        self.use_statements.iter().for_each(|u| { writeln!(f, "{}", u).ok(); });
+        self.use_statements.iter().for_each(|u| {
+            writeln!(f, "{}", u).ok();
+        });
         writeln!(f, "use generative_ecs_2::ecs::*;\n").ok();
 
         writeln!(f, "{}", self.generate_world()).ok();
@@ -332,7 +336,7 @@ impl World {
             .fold(func, |func, comp| {
                 func.add_line(CodeLine::new(
                     0,
-                    &format!("self.{}.insert(id, Default::default());", comp.field_name)
+                    &format!("self.{}.insert(id, Default::default());", comp.field_name),
                 ))
             });
 

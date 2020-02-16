@@ -1,5 +1,5 @@
-use physics::*;
 use generative_ecs_2::ecs::*;
+use physics::*;
 
 #[derive(Debug, Default, Clone)]
 pub struct World {
@@ -14,10 +14,10 @@ impl World {
 
     pub fn create_body(&mut self, entity: BodyEntity) -> Id<Body> {
         let (alloc, state) = self.split();
-        
+
         let id = alloc.body.create();
         state.body.insert(&id, entity.body);
-        
+
         if let Some(orbit) = entity.orbit {
             let child_id = alloc.orbit.create();
             state.orbit.insert(&child_id, orbit);
@@ -25,7 +25,7 @@ impl World {
             state.body.orbit.insert(&id, Some(child_id.id()));
             state.orbit.body.insert(&child_id, id.id());
         }
-        
+
         if let Some(surface) = entity.surface {
             let child_id = alloc.surface.create();
             state.surface.insert(&child_id, surface);
@@ -33,7 +33,7 @@ impl World {
             state.body.surface.insert(&id, Some(child_id.id()));
             state.surface.body.insert(&child_id, id.id());
         }
-        
+
         id
     }
 }
@@ -118,7 +118,7 @@ pub struct BodyRow {
 pub struct Orbit {
     pub body: Component<Self, Id<Body>>,
     pub parent: Component<Self, Option<Id<Orbit>>>,
-    pub period: Component<Self, Duration>,
+    pub period: Component<Self, Time>,
     pub radius: Component<Self, Length>,
     pub relative_position: Component<Self, Position>,
 }
@@ -135,7 +135,7 @@ impl Orbit {
 #[derive(Debug, Clone)]
 pub struct OrbitRow {
     pub parent: Option<Id<Orbit>>,
-    pub period: Duration,
+    pub period: Time,
     pub radius: Length,
 }
 
@@ -267,4 +267,43 @@ pub struct Albedo;
 #[derive(Debug, Default, Copy, Clone)]
 pub struct Duration;
 
-fn main() {}
+fn main() {
+    let mut world = World::default();
+
+    let system = world.allocators.system.create();
+    world.state.system.insert(&system, get_system("Sol"));
+
+    let earth = world.create_body(get_earth(system));
+}
+
+fn get_system(name: &str) -> SystemRow {
+    SystemRow {
+        name: name.to_string().into(),
+        position: Default::default(),
+    }
+}
+
+fn get_surface(area: Area, albedo: Albedo) -> SurfaceRow {
+    SurfaceRow { area, albedo }
+}
+
+fn get_orbit(radius: Length, period: Time, parent: Option<Id<Orbit>>) -> OrbitRow {
+    OrbitRow {
+        parent,
+        period,
+        radius,
+    }
+}
+
+fn get_earth(system: Id<System>) -> BodyEntity {
+    BodyEntity {
+        body: BodyRow {
+            system,
+            name: "Earth".to_string().into(),
+            mass: Mass::in_kilograms(5.972e24),
+            radius: Length::in_meters(6371e3),
+        },
+        orbit: get_orbit(Length::in_meters(149.6e9), Time::in_days(365.25), None).into(),
+        surface: get_surface(Area::in_meters_squared(510.1e12), Albedo).into(),
+    }
+}

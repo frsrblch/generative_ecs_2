@@ -57,7 +57,7 @@ pub fn get_world() -> World {
 
     let mut orbit = Arena::<Permanent>::new("Orbit");
     orbit.add_optional_self_link("parent");
-    orbit.add_required_component_with_field::<Duration>("period");
+    orbit.add_required_component_with_field::<Time>("period");
     orbit.add_required_component_with_field::<Length>("radius");
     orbit.add_default_component_with_field::<Position>("relative_position");
 
@@ -79,6 +79,7 @@ pub fn get_world() -> World {
     let mut vessel = Arena::<Transient>::new("Vessel");
     vessel.add_required_component_with_field::<String>("name");
     vessel.add_required_component::<Mass>();
+    vessel.add_required_component::<Speed>();
 
     let mut transit = Arena::<Transient>::new("Transit");
     transit.add_required_component_with_field::<Time>("departure");
