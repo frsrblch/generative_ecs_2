@@ -3,6 +3,8 @@ use generative_ecs_2::entities::Entity;
 use generative_ecs_2::lifetimes::*;
 use generative_ecs_2::worlds::World;
 
+// cargo run --example gen && cargo check --example target
+
 fn main() {
     let target = "./examples/target.rs";
 
