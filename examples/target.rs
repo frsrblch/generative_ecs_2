@@ -1,5 +1,5 @@
-use generative_ecs_2::ecs::*;
 use physics::*;
+use generative_ecs_2::ecs::*;
 
 #[derive(Debug, Default, Clone)]
 pub struct World {
@@ -14,10 +14,10 @@ impl World {
 
     pub fn create_body(&mut self, entity: BodyEntity) -> Id<Body> {
         let (alloc, state) = self.split();
-
+        
         let id = alloc.body.create();
         state.body.insert(&id, entity.body);
-
+        
         if let Some(orbit) = entity.orbit {
             let child_id = alloc.orbit.create();
             state.orbit.insert(&child_id, orbit);
@@ -25,7 +25,7 @@ impl World {
             state.body.orbit.insert(&id, Some(child_id.id()));
             state.orbit.body.insert(&child_id, id.id());
         }
-
+        
         if let Some(surface) = entity.surface {
             let child_id = alloc.surface.create();
             state.surface.insert(&child_id, surface);
@@ -33,7 +33,7 @@ impl World {
             state.body.surface.insert(&id, Some(child_id.id()));
             state.surface.body.insert(&child_id, id.id());
         }
-
+        
         id
     }
 }
@@ -66,12 +66,16 @@ pub struct State {
 pub struct System {
     pub name: Component<Self, Option<String>>,
     pub position: Component<Self, Position>,
+    pub temperature: Component<Self, Temperature>,
+    pub radius: Component<Self, Length>,
 }
 
 impl System {
     pub fn insert(&mut self, id: &Id<System>, row: SystemRow) {
         self.name.insert(id, row.name);
         self.position.insert(id, row.position);
+        self.temperature.insert(id, row.temperature);
+        self.radius.insert(id, row.radius);
     }
 }
 
@@ -79,6 +83,8 @@ impl System {
 pub struct SystemRow {
     pub name: Option<String>,
     pub position: Position,
+    pub temperature: Temperature,
+    pub radius: Length,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -208,12 +214,14 @@ pub struct ColonyRow {
 pub struct Vessel {
     pub name: Component<Self, String>,
     pub mass: Component<Self, Mass>,
+    pub speed: Component<Self, Speed>,
 }
 
 impl Vessel {
     pub fn insert(&mut self, id: &Valid<Vessel>, row: VesselRow) {
         self.name.insert(id, row.name);
         self.mass.insert(id, row.mass);
+        self.speed.insert(id, row.speed);
     }
 }
 
@@ -221,6 +229,7 @@ impl Vessel {
 pub struct VesselRow {
     pub name: String,
     pub mass: Mass,
+    pub speed: Speed,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -263,23 +272,27 @@ pub struct BodyEntity {
 #[derive(Debug, Default, Copy, Clone)]
 pub struct Population;
 #[derive(Debug, Default, Copy, Clone)]
-pub struct Albedo;
+pub struct Albedo(f64);
 #[derive(Debug, Default, Copy, Clone)]
 pub struct Duration;
 
 fn main() {
     let mut world = World::default();
 
-    let system = world.allocators.system.create();
-    world.state.system.insert(&system, get_system("Sol"));
+    let sol = world.allocators.system.create();
+    world.state.system.insert(&sol, get_sol("Sol"));
 
-    let earth = world.create_body(get_earth(system));
+    let earth = world.create_body(get_earth(sol));
+    let earth_orbit = world.state.body.orbit[&earth].unwrap();
+    let _moon = world.create_body(get_moon(sol, earth_orbit));
 }
 
-fn get_system(name: &str) -> SystemRow {
+fn get_sol(name: &str) -> SystemRow {
     SystemRow {
         name: name.to_string().into(),
         position: Default::default(),
+        temperature: Temperature::in_kelvin(5778.0),
+        radius: Length::in_meters(696340e3),
     }
 }
 
@@ -304,6 +317,19 @@ fn get_earth(system: Id<System>) -> BodyEntity {
             radius: Length::in_meters(6371e3),
         },
         orbit: get_orbit(Length::in_meters(149.6e9), Time::in_days(365.25), None).into(),
-        surface: get_surface(Area::in_meters_squared(510.1e12), Albedo).into(),
+        surface: get_surface(Area::in_meters_squared(510.1e12), Albedo(0.30)).into(),
+    }
+}
+
+fn get_moon(system: Id<System>, earth_orbit: Id<Orbit>) -> BodyEntity {
+    BodyEntity {
+        body: BodyRow {
+            system,
+            name: None,
+            mass: Default::default(),
+            radius: Default::default()
+        },
+        orbit: get_orbit(Length::in_meters(384748e3), Time::in_days(27.32), Some(earth_orbit)).into(),
+        surface: get_surface(Area::in_meters_squared(38e12), Albedo(0.12)).into(),
     }
 }

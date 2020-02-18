@@ -1,10 +1,11 @@
 use crate::lifetimes::*;
-use code_gen::Visibility::Pub;
 use code_gen::*;
-use std::any::Any;
+use code_gen::Visibility::Pub;
 use std::fmt::*;
 use std::marker::PhantomData;
 use std::str::FromStr;
+
+// TODO replace generic methods with type strings, it doesn't work with type aliases as found in physics
 
 #[derive(Debug, Clone)]
 pub struct Component {
@@ -91,9 +92,7 @@ impl<L: Lifetime> Arena<L> {
         }
     }
 
-    pub fn add_required_component<A: Any>(&mut self) {
-        let type_name = Self::get_type_name::<A>();
-
+    pub fn add_required_component(&mut self, type_name: &str) {
         let field = CamelCase::from_str(type_name)
             .map(|cc| cc.into_snake_case())
             .or_else(|_| SnakeCase::from_str(type_name))
@@ -110,9 +109,7 @@ impl<L: Lifetime> Arena<L> {
         });
     }
 
-    pub fn add_required_component_with_field<A: Any>(&mut self, field: &str) {
-        let type_name = Self::get_type_name::<A>();
-
+    pub fn add_required_component_with_field(&mut self, field: &str, type_name: &str) {
         self.arena.components.push(Component {
             field_name: field
                 .parse()
@@ -123,9 +120,7 @@ impl<L: Lifetime> Arena<L> {
         });
     }
 
-    pub fn add_optional_component<A: Any>(&mut self) {
-        let type_name = Self::get_type_name::<A>();
-
+    pub fn add_optional_component(&mut self, type_name: &str) {
         let field = CamelCase::from_str(type_name)
             .map(|cc| cc.into_snake_case())
             .or_else(|_| SnakeCase::from_str(type_name))
@@ -142,9 +137,7 @@ impl<L: Lifetime> Arena<L> {
         });
     }
 
-    pub fn add_optional_component_with_field<A>(&mut self, field: &str) {
-        let type_name = std::any::type_name::<A>().split("::").last().unwrap();
-
+    pub fn add_optional_component_with_field(&mut self, field: &str, type_name: &str) {
         self.arena.components.push(Component {
             field_name: field
                 .parse()
@@ -155,9 +148,7 @@ impl<L: Lifetime> Arena<L> {
         });
     }
 
-    pub fn add_default_component<A: Any + Default>(&mut self) {
-        let type_name = Self::get_type_name::<A>();
-
+    pub fn add_default_component(&mut self, type_name: &str) {
         let field = CamelCase::from_str(type_name)
             .map(|cc| cc.into_snake_case())
             .or_else(|_| SnakeCase::from_str(type_name))
@@ -174,9 +165,7 @@ impl<L: Lifetime> Arena<L> {
         });
     }
 
-    pub fn add_default_component_with_field<A: Default>(&mut self, field: &str) {
-        let type_name = std::any::type_name::<A>().split("::").last().unwrap();
-
+    pub fn add_default_component_with_field(&mut self, field: &str, type_name: &str) {
         self.arena.components.push(Component {
             field_name: field
                 .parse()
@@ -252,10 +241,6 @@ impl<L: Lifetime> Arena<L> {
 
     pub fn name(&self) -> ArenaName {
         self.arena.name.clone()
-    }
-
-    fn get_type_name<A>() -> &'static str {
-        std::any::type_name::<A>().split("::").last().unwrap()
     }
 }
 

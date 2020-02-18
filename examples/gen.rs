@@ -2,7 +2,6 @@ use generative_ecs_2::arenas::Arena;
 use generative_ecs_2::entities::Entity;
 use generative_ecs_2::lifetimes::*;
 use generative_ecs_2::worlds::World;
-use physics::*;
 
 fn main() {
     let target = "./examples/target.rs";
@@ -21,70 +20,51 @@ fn main() {}\n";
     std::fs::write(target, world.to_string() + types).ok();
 }
 
-#[derive(Debug, Default, Copy, Clone)]
-struct Position;
-#[derive(Debug, Default, Copy, Clone)]
-struct Velocity;
-#[derive(Debug, Default, Copy, Clone)]
-struct Temperature;
-#[derive(Debug, Default, Copy, Clone)]
-struct Population;
-#[derive(Debug, Default, Copy, Clone)]
-struct Time;
-#[derive(Debug, Default, Copy, Clone)]
-struct Area;
-#[derive(Debug, Default, Copy, Clone)]
-struct Albedo;
-#[derive(Debug, Default, Copy, Clone)]
-struct Mass;
-#[derive(Debug, Default, Copy, Clone)]
-struct Length;
-#[derive(Debug, Default, Copy, Clone)]
-struct Duration;
-
 pub fn get_world() -> World {
     let mut system = Arena::<Permanent>::new("System");
-    system.add_optional_component_with_field::<String>("name");
-    system.add_required_component::<Position>();
+    system.add_optional_component_with_field("name", "String");
+    system.add_required_component("Position");
+    system.add_required_component("Temperature");
+    system.add_required_component_with_field("radius", "Length");
 
     let mut body = Arena::<Permanent>::new("Body");
     body.add_reference(&system);
-    body.add_optional_component_with_field::<String>("name");
-    body.add_required_component::<Mass>();
-    body.add_required_component_with_field::<Length>("radius");
-    body.add_default_component::<Position>();
-    body.add_default_component::<Velocity>();
+    body.add_optional_component_with_field("name", "String");
+    body.add_required_component("Mass");
+    body.add_required_component_with_field("radius", "Length");
+    body.add_default_component("Position");
+    body.add_default_component("Velocity");
 
     let mut orbit = Arena::<Permanent>::new("Orbit");
     orbit.add_optional_self_link("parent");
-    orbit.add_required_component_with_field::<Time>("period");
-    orbit.add_required_component_with_field::<Length>("radius");
-    orbit.add_default_component_with_field::<Position>("relative_position");
+    orbit.add_required_component_with_field("period", "Time");
+    orbit.add_required_component_with_field("radius", "Length");
+    orbit.add_default_component_with_field("relative_position", "Position");
 
     let mut surface = Arena::<Permanent>::new("Surface");
-    surface.add_required_component::<Area>();
-    surface.add_required_component::<Albedo>();
-    surface.add_default_component::<Temperature>();
+    surface.add_required_component("Area");
+    surface.add_required_component("Albedo");
+    surface.add_default_component("Temperature");
 
     let mut nation = Arena::<Transient>::new("Nation");
-    nation.add_required_component_with_field::<String>("name");
-    nation.add_default_component::<Population>();
+    nation.add_required_component_with_field("name", "String");
+    nation.add_default_component("Population");
 
     let mut colony = Arena::<Transient>::new("Colony");
     colony.add_reference(&body);
     colony.add_reference(&nation);
-    colony.add_required_component_with_field::<String>("name");
-    colony.add_required_component::<Population>();
+    colony.add_required_component_with_field("name", "String");
+    colony.add_required_component("Population");
 
     let mut vessel = Arena::<Transient>::new("Vessel");
-    vessel.add_required_component_with_field::<String>("name");
-    vessel.add_required_component::<Mass>();
-    vessel.add_required_component::<Speed>();
+    vessel.add_required_component_with_field("name", "String");
+    vessel.add_required_component("Mass");
+    vessel.add_required_component("Speed");
 
     let mut transit = Arena::<Transient>::new("Transit");
-    transit.add_required_component_with_field::<Time>("departure");
-    transit.add_required_component_with_field::<Time>("arrival");
-    transit.add_default_component::<Position>();
+    transit.add_required_component_with_field("departure", "Time");
+    transit.add_required_component_with_field("arrival", "Time");
+    transit.add_default_component("Position");
     transit.add_reference(&vessel);
     transit.add_reference_with_field(&body, "from");
     transit.add_reference_with_field(&body, "to");
