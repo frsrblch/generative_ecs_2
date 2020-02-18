@@ -273,8 +273,6 @@ pub struct BodyEntity {
 pub struct Population;
 #[derive(Debug, Default, Copy, Clone)]
 pub struct Albedo(f64);
-#[derive(Debug, Default, Copy, Clone)]
-pub struct Duration;
 
 fn main() {
     let mut world = World::default();

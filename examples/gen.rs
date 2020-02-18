@@ -6,18 +6,73 @@ use generative_ecs_2::worlds::World;
 fn main() {
     let target = "./examples/target.rs";
 
-    let types = "#[derive(Debug, Default, Copy, Clone)]
+    let addition =
+r#"#[derive(Debug, Default, Copy, Clone)]
 pub struct Population;
 #[derive(Debug, Default, Copy, Clone)]
-pub struct Albedo;
-#[derive(Debug, Default, Copy, Clone)]
-pub struct Duration;
+pub struct Albedo(f64);
 
-fn main() {}\n";
+fn main() {
+    let mut world = World::default();
+
+    let sol = world.allocators.system.create();
+    world.state.system.insert(&sol, get_sol("Sol"));
+
+    let earth = world.create_body(get_earth(sol));
+    let earth_orbit = world.state.body.orbit[&earth].unwrap();
+    let _moon = world.create_body(get_moon(sol, earth_orbit));
+}
+
+fn get_sol(name: &str) -> SystemRow {
+    SystemRow {
+        name: name.to_string().into(),
+        position: Default::default(),
+        temperature: Temperature::in_kelvin(5778.0),
+        radius: Length::in_meters(696340e3),
+    }
+}
+
+fn get_surface(area: Area, albedo: Albedo) -> SurfaceRow {
+    SurfaceRow { area, albedo }
+}
+
+fn get_orbit(radius: Length, period: Time, parent: Option<Id<Orbit>>) -> OrbitRow {
+    OrbitRow {
+        parent,
+        period,
+        radius,
+    }
+}
+
+fn get_earth(system: Id<System>) -> BodyEntity {
+    BodyEntity {
+        body: BodyRow {
+            system,
+            name: "Earth".to_string().into(),
+            mass: Mass::in_kilograms(5.972e24),
+            radius: Length::in_meters(6371e3),
+        },
+        orbit: get_orbit(Length::in_meters(149.6e9), Time::in_days(365.25), None).into(),
+        surface: get_surface(Area::in_meters_squared(510.1e12), Albedo(0.30)).into(),
+    }
+}
+
+fn get_moon(system: Id<System>, earth_orbit: Id<Orbit>) -> BodyEntity {
+    BodyEntity {
+        body: BodyRow {
+            system,
+            name: None,
+            mass: Default::default(),
+            radius: Default::default()
+        },
+        orbit: get_orbit(Length::in_meters(384748e3), Time::in_days(27.32), Some(earth_orbit)).into(),
+        surface: get_surface(Area::in_meters_squared(38e12), Albedo(0.12)).into(),
+    }
+}"#;
 
     let world = get_world();
 
-    std::fs::write(target, world.to_string() + types).ok();
+    std::fs::write(target, world.to_string() + addition).ok();
 }
 
 pub fn get_world() -> World {
