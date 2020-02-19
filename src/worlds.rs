@@ -131,19 +131,17 @@ impl World {
                 self.generate_arena_row(arena).typ
             ))
             .with_return(self.get_valid_id(&arena.name).to_string())
-            .add_line(CodeLine::new(0, "let (alloc, state) = self.split();"))
-            .add_line(CodeLine::new(0, ""))
             .add_line(CodeLine::new(
                 0,
                 &format!(
-                    "let id = alloc.{e}.create();",
+                    "let id = self.allocators.{e}.create();",
                     e = arena.name.as_field_name(),
                 ),
             ))
             .add_line(CodeLine::new(
                 0,
                 &format!(
-                    "state.{e}.insert(&id, row);",
+                    "self.state.{e}.insert(&id, row);",
                     e = arena.name.as_field_name(),
                 ),
             ))
