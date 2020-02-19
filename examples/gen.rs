@@ -18,31 +18,18 @@ fn main() {
     let mut world = World::default();
 
     let sol = world.allocators.system.create();
-    world.state.system.insert(&sol, get_sol("Sol"));
+    world.state.system.insert(&sol, get_sol());
 
     let earth = world.create_body(get_earth(sol));
-    let earth_orbit = world.state.body.orbit[&earth].unwrap();
-    let _moon = world.create_body(get_moon(sol, earth_orbit));
+    let _moon = world.create_body(get_luna(&world.state, earth));
 }
 
-fn get_sol(name: &str) -> SystemRow {
+fn get_sol() -> SystemRow {
     SystemRow {
-        name: name.to_string().into(),
+        name: "Sol".to_string().into(),
         position: Default::default(),
         temperature: Temperature::in_kelvin(5778.0),
         radius: Length::in_meters(696340e3),
-    }
-}
-
-fn get_surface(area: Area, albedo: Albedo) -> SurfaceRow {
-    SurfaceRow { area, albedo }
-}
-
-fn get_orbit(radius: Length, period: Time, parent: Option<Id<Orbit>>) -> OrbitRow {
-    OrbitRow {
-        parent,
-        period,
-        radius,
     }
 }
 
@@ -54,21 +41,23 @@ fn get_earth(system: Id<System>) -> BodyEntity {
             mass: Mass::in_kilograms(5.972e24),
             radius: Length::in_meters(6371e3),
         },
-        orbit: get_orbit(Length::in_meters(149.6e9), Time::in_days(365.25), None).into(),
-        surface: get_surface(Area::in_meters_squared(510.1e12), Albedo(0.30)).into(),
+        orbit: Some(OrbitRow { radius: Length::in_meters(149.6e9), period: Time::in_days(365.25), parent: None }),
+        surface: Some(SurfaceRow { area: Area::in_meters_squared(510.1e12), albedo: Albedo(0.30) }),
     }
 }
 
-fn get_moon(system: Id<System>, earth_orbit: Id<Orbit>) -> BodyEntity {
+fn get_luna(state: &State, earth: Id<Body>) -> BodyEntity {
+    let system = state.body.system[&earth];
+    let parent = state.body.orbit[&earth];
     BodyEntity {
         body: BodyRow {
             system,
-            name: None,
+            name: "Luna".to_string().into(),
             mass: Default::default(),
             radius: Default::default()
         },
-        orbit: get_orbit(Length::in_meters(384748e3), Time::in_days(27.32), Some(earth_orbit)).into(),
-        surface: get_surface(Area::in_meters_squared(38e12), Albedo(0.12)).into(),
+        orbit: Some(OrbitRow { radius: Length::in_meters(384748e3), period: Time::in_days(27.32), parent }),
+        surface: Some(SurfaceRow { area: Area::in_meters_squared(38e12), albedo: Albedo(0.12) }),
     }
 }"#;
 
