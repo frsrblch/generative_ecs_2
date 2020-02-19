@@ -1,6 +1,6 @@
 use crate::lifetimes::*;
-use code_gen::*;
 use code_gen::Visibility::Pub;
+use code_gen::*;
 use std::fmt::*;
 use std::marker::PhantomData;
 use std::str::FromStr;

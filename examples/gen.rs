@@ -8,8 +8,7 @@ use generative_ecs_2::worlds::World;
 fn main() {
     let target = "./examples/target.rs";
 
-    let addition =
-r#"#[derive(Debug, Default, Copy, Clone)]
+    let addition = r#"#[derive(Debug, Default, Copy, Clone)]
 pub struct Population;
 #[derive(Debug, Default, Copy, Clone)]
 pub struct Albedo(f64);
@@ -41,8 +40,15 @@ fn get_earth(system: Id<System>) -> BodyEntity {
             mass: Mass::in_kilograms(5.972e24),
             radius: Length::in_meters(6371e3),
         },
-        orbit: Some(OrbitRow { radius: Length::in_meters(149.6e9), period: Time::in_days(365.25), parent: None }),
-        surface: Some(SurfaceRow { area: Area::in_meters_squared(510.1e12), albedo: Albedo(0.30) }),
+        orbit: Some(OrbitRow {
+            radius: Length::in_meters(149.6e9),
+            period: Time::in_days(365.25),
+            parent: None,
+        }),
+        surface: Some(SurfaceRow {
+            area: Area::in_meters_squared(510.1e12),
+            albedo: Albedo(0.30),
+        }),
     }
 }
 
@@ -54,12 +60,20 @@ fn get_luna(state: &State, earth: Id<Body>) -> BodyEntity {
             system,
             name: "Luna".to_string().into(),
             mass: Default::default(),
-            radius: Default::default()
+            radius: Default::default(),
         },
-        orbit: Some(OrbitRow { radius: Length::in_meters(384748e3), period: Time::in_days(27.32), parent }),
-        surface: Some(SurfaceRow { area: Area::in_meters_squared(38e12), albedo: Albedo(0.12) }),
+        orbit: Some(OrbitRow {
+            radius: Length::in_meters(384748e3),
+            period: Time::in_days(27.32),
+            parent,
+        }),
+        surface: Some(SurfaceRow {
+            area: Area::in_meters_squared(38e12),
+            albedo: Albedo(0.12),
+        }),
     }
-}"#;
+}
+"#;
 
     let world = get_world();
 
