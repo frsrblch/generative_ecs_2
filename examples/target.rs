@@ -36,6 +36,46 @@ impl World {
         
         id
     }
+
+    pub fn create_system(&mut self, row: SystemRow) -> Id<System> {
+        let (alloc, state) = self.split();
+        
+        let id = alloc.system.create();
+        state.system.insert(&id, row);
+        id
+    }
+
+    pub fn create_nation(&mut self, row: NationRow) -> Valid<Nation> {
+        let (alloc, state) = self.split();
+        
+        let id = alloc.nation.create();
+        state.nation.insert(&id, row);
+        id
+    }
+
+    pub fn create_colony(&mut self, row: ColonyRow) -> Valid<Colony> {
+        let (alloc, state) = self.split();
+        
+        let id = alloc.colony.create();
+        state.colony.insert(&id, row);
+        id
+    }
+
+    pub fn create_vessel(&mut self, row: VesselRow) -> Valid<Vessel> {
+        let (alloc, state) = self.split();
+        
+        let id = alloc.vessel.create();
+        state.vessel.insert(&id, row);
+        id
+    }
+
+    pub fn create_transit(&mut self, row: TransitRow) -> Valid<Transit> {
+        let (alloc, state) = self.split();
+        
+        let id = alloc.transit.create();
+        state.transit.insert(&id, row);
+        id
+    }
 }
 
 #[derive(Debug, Default, Clone)]
@@ -277,9 +317,7 @@ pub struct Albedo(f64);
 fn main() {
     let mut world = World::default();
 
-    let sol = world.allocators.system.create();
-    world.state.system.insert(&sol, get_sol());
-
+    let sol = world.create_system(get_sol());
     let earth = world.create_body(get_earth(sol));
     let _moon = world.create_body(get_luna(&world.state, earth));
 }

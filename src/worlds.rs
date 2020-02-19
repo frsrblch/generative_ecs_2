@@ -89,12 +89,21 @@ impl World {
     }
 
     pub fn generate_world_impl(&self) -> Impl {
-        let i = Impl::new(WORLD).add_function(Self::get_split_function());
+        let world_impl = Impl::new(WORLD).add_function(Self::get_split_function());
 
-        self.entities
+        let entity_methods = self
+            .entities
             .iter()
-            .map(|e| self.generate_entity_function(e))
-            .fold(i, |w, f| w.add_function(f))
+            .map(|e| self.generate_entity_function(e));
+
+        let arena_functions = self
+            .arenas
+            .iter()
+            .filter_map(|a| self.generate_non_entity_arena_function(a));
+
+        entity_methods
+            .chain(arena_functions)
+            .fold(world_impl, |world, f| world.add_function(f))
     }
 
     fn get_split_function() -> Function {
@@ -109,6 +118,38 @@ impl World {
                     Field::from_type(Type::new(STATE)).name,
                 ),
             ))
+    }
+
+    fn generate_non_entity_arena_function(&self, arena: &ArenaCore) -> Option<Function> {
+        if self.entities.iter().any(|e| e.owns_arena(&arena.name)) {
+            return None;
+        }
+
+        let func = Function::new(&format!("create_{}", arena.name.as_field_name()))
+            .with_parameters(&format!(
+                "&mut self, row: {}",
+                self.generate_arena_row(arena).typ
+            ))
+            .with_return(self.get_valid_id(&arena.name).to_string())
+            .add_line(CodeLine::new(0, "let (alloc, state) = self.split();"))
+            .add_line(CodeLine::new(0, ""))
+            .add_line(CodeLine::new(
+                0,
+                &format!(
+                    "let id = alloc.{e}.create();",
+                    e = arena.name.as_field_name(),
+                ),
+            ))
+            .add_line(CodeLine::new(
+                0,
+                &format!(
+                    "state.{e}.insert(&id, row);",
+                    e = arena.name.as_field_name(),
+                ),
+            ))
+            .add_line(CodeLine::new(0, "id"));
+
+        func.into()
     }
 
     fn generate_entity_function(&self, entity: &EntityCore) -> Function {
@@ -311,6 +352,7 @@ impl World {
             .with_derives(Derives::with_debug_clone())
             .with_fields(fields)
     }
+
     fn generate_arena_impl(&self, arena: &ArenaCore) -> Impl {
         Impl::from(&self.generate_arena(arena).typ).add_function(self.get_insert_function(arena))
     }

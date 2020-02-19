@@ -44,6 +44,12 @@ impl EntityCore {
     pub fn name(&self) -> CamelCase {
         CamelCase::new(&format!("{}Entity", self.base))
     }
+
+    pub(crate) fn owns_arena(&self, arena: &ArenaName) -> bool {
+        return self.base == *arena
+            || self.children.contains(&arena)
+            || self.collections.contains(&arena);
+    }
 }
 
 #[derive(Debug)]

@@ -16,9 +16,7 @@ pub struct Albedo(f64);
 fn main() {
     let mut world = World::default();
 
-    let sol = world.allocators.system.create();
-    world.state.system.insert(&sol, get_sol());
-
+    let sol = world.create_system(get_sol());
     let earth = world.create_body(get_earth(sol));
     let _moon = world.create_body(get_luna(&world.state, earth));
 }
