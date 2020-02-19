@@ -67,6 +67,20 @@ impl<ID, T> Insert<Id<ID>, T> for Component<ID, T> {
     }
 }
 
+impl<ID, T> Index<Id<ID>> for Component<ID, T> {
+    type Output = T;
+
+    fn index(&self, index: Id<ID>) -> &Self::Output {
+        &self.values[index.index]
+    }
+}
+
+impl<ID, T> IndexMut<Id<ID>> for Component<ID, T> {
+    fn index_mut(&mut self, index: Id<ID>) -> &mut Self::Output {
+        &mut self.values[index.index]
+    }
+}
+
 impl<ID, T> Index<&Valid<'_, ID>> for Component<ID, T> {
     type Output = T;
 
@@ -77,6 +91,20 @@ impl<ID, T> Index<&Valid<'_, ID>> for Component<ID, T> {
 
 impl<ID, T> IndexMut<&Valid<'_, ID>> for Component<ID, T> {
     fn index_mut(&mut self, index: &Valid<ID>) -> &mut Self::Output {
+        &mut self.values[index.id.index]
+    }
+}
+
+impl<ID, T> Index<Valid<'_, ID>> for Component<ID, T> {
+    type Output = T;
+
+    fn index(&self, index: Valid<ID>) -> &Self::Output {
+        &self.values[index.id.index]
+    }
+}
+
+impl<ID, T> IndexMut<Valid<'_, ID>> for Component<ID, T> {
+    fn index_mut(&mut self, index: Valid<ID>) -> &mut Self::Output {
         &mut self.values[index.id.index]
     }
 }
