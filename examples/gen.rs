@@ -71,6 +71,32 @@ fn get_luna(state: &State, earth: Id<Body>) -> BodyEntity {
         }),
     }
 }
+
+pub struct BodyPosition;
+
+impl BodyPosition {
+    pub fn update(state: &mut State) {
+        let position = &mut state.body.position;
+        let orbit = &state.body.orbit;
+
+        let relative_position = &state.orbit.relative_position;
+        let parent = &state.orbit.parent;
+
+        position
+            .iter_mut()
+            .zip(orbit.iter())
+            .filter_map(|(pos, orbit)| orbit.map(|orbit| (pos, orbit)))
+            .for_each(|(pos, orbit)| {
+                let mut orbit = orbit;
+                *pos = relative_position[orbit];
+                while let Some(parent) = parent[orbit] {
+                    orbit = parent;
+                    *pos += relative_position[orbit];
+                }
+            })
+    }
+}
+
 "#;
 
     let world = get_world();
