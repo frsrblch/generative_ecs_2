@@ -1,5 +1,5 @@
-use generative_ecs_2::ecs::*;
 use physics::*;
+use generative_ecs_2::ecs::*;
 
 #[derive(Debug, Default, Clone)]
 pub struct World {
@@ -14,10 +14,10 @@ impl World {
 
     pub fn create_body(&mut self, entity: BodyEntity) -> Id<Body> {
         let (alloc, state) = self.split();
-
+        
         let id = alloc.body.create();
         state.body.insert(&id, entity.body);
-
+        
         if let Some(orbit) = entity.orbit {
             let child_id = alloc.orbit.create();
             state.orbit.insert(&child_id, orbit);
@@ -25,7 +25,7 @@ impl World {
             state.body.orbit.insert(&id, Some(child_id.id()));
             state.orbit.body.insert(&child_id, id.id());
         }
-
+        
         if let Some(surface) = entity.surface {
             let child_id = alloc.surface.create();
             state.surface.insert(&child_id, surface);
@@ -33,7 +33,7 @@ impl World {
             state.body.surface.insert(&id, Some(child_id.id()));
             state.surface.body.insert(&child_id, id.id());
         }
-
+        
         id
     }
 
@@ -44,34 +44,26 @@ impl World {
     }
 
     pub fn create_nation(&mut self, row: NationRow) -> Valid<Nation> {
-        let (alloc, state) = self.split();
-
-        let id = alloc.nation.create();
-        state.nation.insert(&id, row);
+        let id = self.allocators.nation.create();
+        self.state.nation.insert(&id, row);
         id
     }
 
     pub fn create_colony(&mut self, row: ColonyRow) -> Valid<Colony> {
-        let (alloc, state) = self.split();
-
-        let id = alloc.colony.create();
-        state.colony.insert(&id, row);
+        let id = self.allocators.colony.create();
+        self.state.colony.insert(&id, row);
         id
     }
 
     pub fn create_vessel(&mut self, row: VesselRow) -> Valid<Vessel> {
-        let (alloc, state) = self.split();
-
-        let id = alloc.vessel.create();
-        state.vessel.insert(&id, row);
+        let id = self.allocators.vessel.create();
+        self.state.vessel.insert(&id, row);
         id
     }
 
     pub fn create_transit(&mut self, row: TransitRow) -> Valid<Transit> {
-        let (alloc, state) = self.split();
-
-        let id = alloc.transit.create();
-        state.transit.insert(&id, row);
+        let id = self.allocators.transit.create();
+        self.state.transit.insert(&id, row);
         id
     }
 }
