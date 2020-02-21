@@ -162,7 +162,7 @@ pub fn get_world() -> World {
 
     let mut world = World::new();
 
-    world.add_field(Field::new("starfield", "Starfield"));
+    world.add_state_field(Field::new("starfield", "Starfield"));
 
     world.use_statements.push("use physics::*;".to_string());
 

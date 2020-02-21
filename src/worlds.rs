@@ -55,8 +55,8 @@ impl World {
         self.arenas.iter().any(|a| a.name.eq(arena_name))
     }
 
-    pub fn add_field(&mut self, field: Field) {
-        self.fields.push(field);
+    pub fn add_state_field(&mut self, field_name: &str, field_type: &str) {
+        self.fields.push(Field::new(field_name, field_type));
     }
 
     pub fn insert_arena<L: Lifetime>(&mut self, arena: Arena<L>) {
