@@ -7,7 +7,7 @@ use std::num::NonZeroU32;
 
 #[derive(Debug)]
 pub struct Id<T> {
-    pub(crate) index: usize,
+    pub index: usize,
     marker: PhantomData<T>,
 }
 
@@ -61,6 +61,10 @@ impl<T> Id<T> {
 
     pub fn id(&self) -> Self {
         *self
+    }
+
+    pub fn index(&self) -> usize {
+        self.index
     }
 }
 
@@ -124,6 +128,10 @@ impl<T> GenId<T> {
             gen,
             marker: PhantomData,
         }
+    }
+
+    pub fn index(&self) -> usize {
+        self.index
     }
 }
 
