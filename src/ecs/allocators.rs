@@ -14,6 +14,12 @@ impl<T> FixedAllocator<T> {
         self.next_index += 1;
         id
     }
+
+    pub fn ids(&self) -> impl Iterator<Item=Id<T>> {
+        (0..self.next_index)
+            .into_iter()
+            .map(|i| Id::new(i))
+    }
 }
 
 #[derive(Debug, Default, Clone)]
