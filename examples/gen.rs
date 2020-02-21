@@ -2,6 +2,7 @@ use generative_ecs_2::arenas::Arena;
 use generative_ecs_2::entities::Entity;
 use generative_ecs_2::lifetimes::*;
 use generative_ecs_2::worlds::World;
+use code_gen::Field;
 
 // cargo run --example gen && cargo check --example target
 
@@ -12,6 +13,8 @@ fn main() {
 pub struct Population;
 #[derive(Debug, Default, Copy, Clone)]
 pub struct Albedo(f64);
+#[derive(Debug, Default, Copy, Clone)]
+pub struct Starfield;
 
 fn main() {
     let mut world = World::default();
@@ -158,6 +161,8 @@ pub fn get_world() -> World {
     planet.add_child(&surface);
 
     let mut world = World::new();
+
+    world.add_field(Field::new("starfield", "Starfield"));
 
     world.use_statements.push("use physics::*;".to_string());
 

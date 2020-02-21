@@ -82,6 +82,7 @@ pub struct Allocators {
 
 #[derive(Debug, Default, Clone)]
 pub struct State {
+    pub starfield: Starfield,
     pub system: System,
     pub body: Body,
     pub orbit: Orbit,
@@ -303,6 +304,8 @@ pub struct BodyEntity {
 pub struct Population;
 #[derive(Debug, Default, Copy, Clone)]
 pub struct Albedo(f64);
+#[derive(Debug, Default, Copy, Clone)]
+pub struct Starfield;
 
 fn main() {
     let mut world = World::default();

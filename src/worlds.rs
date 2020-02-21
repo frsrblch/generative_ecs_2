@@ -6,12 +6,11 @@ use code_gen::*;
 use std::collections::HashMap;
 use std::fmt::*;
 
-// TODO create_x methods for non-entity arenas
-
 #[derive(Debug, Default)]
 pub struct World {
     pub use_statements: Vec<String>,
 
+    pub fields: Vec<Field>,
     pub arenas: Vec<ArenaCore>,
     pub entities: Vec<EntityCore>,
 
@@ -54,6 +53,10 @@ impl World {
 
     fn contains_arena(&self, arena_name: &ArenaName) -> bool {
         self.arenas.iter().any(|a| a.name.eq(arena_name))
+    }
+
+    pub fn add_field(&mut self, field: Field) {
+        self.fields.push(field);
     }
 
     pub fn insert_arena<L: Lifetime>(&mut self, arena: Arena<L>) {
@@ -315,15 +318,16 @@ impl World {
     }
 
     pub fn generate_state(&self) -> Struct {
-        let fields = self
+        let arena_fields = self
             .arenas
             .iter()
             .map(|a| Field {
                 visibility: Pub,
                 name: a.name.as_field_name(),
                 field_type: a.name.as_type(),
-            })
-            .collect();
+            });
+
+        let fields = self.fields.iter().cloned().chain(arena_fields).collect();
 
         Struct::new(STATE)
             .with_derives(Derives::with_debug_default_clone())
