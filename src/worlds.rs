@@ -5,6 +5,7 @@ use code_gen::Visibility::Pub;
 use code_gen::*;
 use std::collections::HashMap;
 use std::fmt::*;
+use std::str::FromStr;
 
 #[derive(Debug, Default)]
 pub struct World {
@@ -57,6 +58,26 @@ impl World {
 
     pub fn add_state_field(&mut self, field_name: &str, field_type: &str) {
         self.fields.push(Field::new(field_name, field_type));
+    }
+
+    pub fn add_state_field_by_type(&mut self, type_name: &str) {
+        let name = CamelCase::from_str(type_name)
+            .map(|cc| cc.into_snake_case())
+            .or_else(|_| SnakeCase::from_str(type_name))
+            .expect(&format!(
+                "Given type cannot be formatted as snake_case: {}",
+                type_name
+            ));
+
+        let field_type = Type::new(type_name);
+
+        let field = Field {
+            visibility: Pub,
+            name,
+            field_type,
+        };
+
+        self.fields.push(field);
     }
 
     pub fn insert_arena<L: Lifetime>(&mut self, arena: Arena<L>) {

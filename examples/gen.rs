@@ -2,7 +2,6 @@ use generative_ecs_2::arenas::Arena;
 use generative_ecs_2::entities::Entity;
 use generative_ecs_2::lifetimes::*;
 use generative_ecs_2::worlds::World;
-use code_gen::Field;
 
 // cargo run --example gen && cargo check --example target
 
@@ -162,7 +161,7 @@ pub fn get_world() -> World {
 
     let mut world = World::new();
 
-    world.add_state_field(Field::new("starfield", "Starfield"));
+    world.add_state_field_by_type("Starfield");
 
     world.use_statements.push("use physics::*;".to_string());
 
