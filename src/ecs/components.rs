@@ -8,6 +8,11 @@ pub trait Insert<ID, T> {
     fn insert(&mut self, id: &ID, value: T);
 }
 
+pub trait Get<ID, T> {
+    fn get(&self, id: ID) -> Option<&T>;
+    fn get_mut(&mut self, id: ID) -> Option<&mut T>;
+}
+
 #[derive(Debug, Clone)]
 pub struct Component<ID, T> {
     values: Vec<T>,
@@ -44,6 +49,46 @@ impl<ID, T> Component<ID, T> {
 
     pub fn iter_mut(&mut self) -> std::slice::IterMut<T> {
         (&mut self.values).into_iter()
+    }
+}
+
+impl<ID, T> Get<Id<ID>, T> for Component<ID, T> {
+    fn get(&self, id: Id<ID>) -> Option<&T> {
+        self.values.get(id.index)
+    }
+
+    fn get_mut(&mut self, id: Id<ID>) -> Option<&mut T> {
+        self.values.get_mut(id.index)
+    }
+}
+
+impl<ID, T> Get<&Id<ID>, T> for Component<ID, T> {
+    fn get(&self, id: &Id<ID>) -> Option<&T> {
+        self.values.get(id.index)
+    }
+
+    fn get_mut(&mut self, id: &Id<ID>) -> Option<&mut T> {
+        self.values.get_mut(id.index)
+    }
+}
+
+impl<ID, T> Get<Valid<'_, ID>, T> for Component<ID, T> {
+    fn get(&self, id: Valid<ID>) -> Option<&T> {
+        self.values.get(id.id.index)
+    }
+
+    fn get_mut(&mut self, id: Valid<ID>) -> Option<&mut T> {
+        self.values.get_mut(id.id.index)
+    }
+}
+
+impl<ID, T> Get<&Valid<'_, ID>, T> for Component<ID, T> {
+    fn get(&self, id: &Valid<ID>) -> Option<&T> {
+        self.values.get(id.id.index)
+    }
+
+    fn get_mut(&mut self, id: &Valid<ID>) -> Option<&mut T> {
+        self.values.get_mut(id.id.index)
     }
 }
 
