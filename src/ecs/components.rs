@@ -1,6 +1,5 @@
 use crate::ecs::ids::{Id, Valid};
 use rayon::iter::*;
-use std::any::type_name;
 use std::marker::PhantomData;
 use std::ops::{Index, IndexMut};
 
@@ -30,63 +29,68 @@ impl<ID, T> Default for Component<ID, T> {
 
 impl<ID, T> Component<ID, T> {
     fn insert_unchecked(&mut self, index: usize, value: T) {
-        match self.values.len() {
-            len if index < len => self.values[index] = value,
-            len if index == len => self.values.push(value),
-            len => panic!(format!(
-                "Component<{},{}>: Invalid index ({}) for insert given current length ({})",
-                type_name::<ID>(),
-                type_name::<T>(),
-                index,
-                len
-            )),
+        if let Some(val) = self.values.get_mut(index) {
+            *val = value;
+        } else {
+            debug_assert_eq!(index, self.values.len());
+            self.values.push(value);
         }
     }
 
+    #[inline(always)]
     pub fn iter(&self) -> std::slice::Iter<T> {
         (&self.values).into_iter()
     }
 
+    #[inline(always)]
     pub fn iter_mut(&mut self) -> std::slice::IterMut<T> {
         (&mut self.values).into_iter()
     }
 }
 
 impl<ID, T> Get<Id<ID>, T> for Component<ID, T> {
+    #[inline(always)]
     fn get(&self, id: Id<ID>) -> Option<&T> {
         self.values.get(id.index)
     }
 
+    #[inline(always)]
     fn get_mut(&mut self, id: Id<ID>) -> Option<&mut T> {
         self.values.get_mut(id.index)
     }
 }
 
 impl<ID, T> Get<&Id<ID>, T> for Component<ID, T> {
+    #[inline(always)]
     fn get(&self, id: &Id<ID>) -> Option<&T> {
         self.values.get(id.index)
     }
 
+    #[inline(always)]
     fn get_mut(&mut self, id: &Id<ID>) -> Option<&mut T> {
         self.values.get_mut(id.index)
     }
 }
 
 impl<ID, T> Get<Valid<'_, ID>, T> for Component<ID, T> {
+    #[inline(always)]
     fn get(&self, id: Valid<ID>) -> Option<&T> {
         self.values.get(id.id.index)
     }
 
+    #[inline(always)]
     fn get_mut(&mut self, id: Valid<ID>) -> Option<&mut T> {
         self.values.get_mut(id.id.index)
     }
 }
 
 impl<ID, T> Get<&Valid<'_, ID>, T> for Component<ID, T> {
+    #[inline(always)]
     fn get(&self, id: &Valid<ID>) -> Option<&T> {
         self.values.get(id.id.index)
     }
 
+    #[inline(always)]
     fn get_mut(&mut self, id: &Valid<ID>) -> Option<&mut T> {
         self.values.get_mut(id.id.index)
     }
@@ -107,6 +111,7 @@ impl<ID, T> IndexMut<&Id<ID>> for Component<ID, T> {
 }
 
 impl<ID, T> Insert<Id<ID>, T> for Component<ID, T> {
+    #[inline(always)]
     fn insert(&mut self, id: &Id<ID>, value: T) {
         self.insert_unchecked(id.index, value);
     }
@@ -155,6 +160,7 @@ impl<ID, T> IndexMut<Valid<'_, ID>> for Component<ID, T> {
 }
 
 impl<ID, T> Insert<Valid<'_, ID>, T> for Component<ID, T> {
+    #[inline(always)]
     fn insert(&mut self, id: &Valid<ID>, value: T) {
         self.insert_unchecked(id.id.index, value);
     }
@@ -164,6 +170,7 @@ impl<'a, ID: Send, T: Send + Sync> IntoParallelIterator for &'a Component<ID, T>
     type Iter = rayon::slice::Iter<'a, T>;
     type Item = &'a T;
 
+    #[inline(always)]
     fn into_par_iter(self) -> Self::Iter {
         self.values.par_iter()
     }
@@ -173,6 +180,7 @@ impl<'a, ID: Send, T: Send + Sync> IntoParallelIterator for &'a mut Component<ID
     type Iter = rayon::slice::IterMut<'a, T>;
     type Item = &'a mut T;
 
+    #[inline(always)]
     fn into_par_iter(self) -> Self::Iter {
         self.values.par_iter_mut()
     }
