@@ -33,7 +33,11 @@ pub struct GenAllocator<T> {
 impl<T> GenAllocator<T> {
     pub fn create(&mut self) -> Valid<T> {
         if let Some(index) = self.dead.pop() {
-            let gen = self.generation[index];
+            let gen = self
+                .generation
+                .get(index)
+                .copied()
+                .unwrap_or_else(Default::default);
 
             self.living.insert(index);
 
