@@ -79,10 +79,12 @@ impl<T> GenAllocator<T> {
     }
 
     pub fn ids<'a>(&'a self) -> impl Iterator<Item = Valid<T>> + 'a {
-        self.living.iter().filter_map(move |index| {
-            let gen = self.generation.get(index)?;
-            let id = GenId::new(index, *gen);
-            Some(Valid::new(id))
-        })
+        self.living
+            .iter()
+            .filter_map(move |index| {
+                let gen = self.generation.get(index)?;
+                let id = GenId::new(index, *gen);
+                Some(Valid::new(id))
+            })
     }
 }
