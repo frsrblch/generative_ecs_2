@@ -60,27 +60,29 @@ impl<T> GenAllocator<T> {
     }
 
     pub fn is_alive(&self, id: GenId<T>) -> bool {
-        self.generation
-            .get(id.index)
-            .map(|current_gen| *current_gen == id.gen)
-            .unwrap_or(false)
+        if let Some(gen) = self.generation.get(id.index) {
+            *gen == id.gen
+        } else {
+            false
+        }
     }
 
     pub fn kill(&mut self, id: GenId<T>) {
-        if self.is_alive(id) {
-            let gen = &mut self.generation[id.index];
-            *gen = gen.next();
+        if let Some(gen) = self.generation.get_mut(id.index) {
+            if *gen == id.gen {
+                *gen = gen.next();
 
-            self.living.remove(id.index);
-            self.dead.push(id.index);
+                self.living.remove(id.index);
+                self.dead.push(id.index);
+            }
         }
     }
 
     pub fn ids<'a>(&'a self) -> impl Iterator<Item = Valid<T>> + 'a {
-        self.living.iter().map(move |index| {
-            let gen = self.generation[index];
-            let id = GenId::new(index, gen);
-            Valid::new(id)
+        self.living.iter().filter_map(move |index| {
+            let gen = self.generation.get(index)?;
+            let id = GenId::new(index, *gen);
+            Some(Valid::new(id))
         })
     }
 }
