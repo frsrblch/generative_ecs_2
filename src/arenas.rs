@@ -196,7 +196,7 @@ impl<L: Lifetime> Arena<L> {
         });
     }
 
-    pub fn add_reference_with_field(&mut self, arena: &Arena<impl Lifetime>, field: &str) {
+    pub fn add_reference_with_field(&mut self, field: &str, arena: &Arena<impl Lifetime>) {
         self.arena.components.push(Component {
             field_name: field
                 .parse()
@@ -216,7 +216,7 @@ impl<L: Lifetime> Arena<L> {
         });
     }
 
-    pub fn add_optional_reference_with_field(&mut self, arena: &Arena<impl Lifetime>, field: &str) {
+    pub fn add_optional_reference_with_field(&mut self, field: &str, arena: &Arena<impl Lifetime>) {
         self.arena.components.push(Component {
             field_name: field
                 .parse()

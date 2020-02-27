@@ -152,8 +152,8 @@ pub fn get_world() -> World {
     transit.add_required_component_with_field("arrival", "Time");
     transit.add_default_component("Position");
     transit.add_reference(&vessel);
-    transit.add_reference_with_field(&body, "from");
-    transit.add_reference_with_field(&body, "to");
+    transit.add_reference_with_field("from", &body);
+    transit.add_reference_with_field("to", &body);
 
     let mut planet = Entity::new(&body);
     planet.add_child(&orbit);
