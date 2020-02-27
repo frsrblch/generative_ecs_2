@@ -339,14 +339,11 @@ impl World {
     }
 
     pub fn generate_state(&self) -> Struct {
-        let arena_fields = self
-            .arenas
-            .iter()
-            .map(|a| Field {
-                visibility: Pub,
-                name: a.name.as_field_name(),
-                field_type: a.name.as_type(),
-            });
+        let arena_fields = self.arenas.iter().map(|a| Field {
+            visibility: Pub,
+            name: a.name.as_field_name(),
+            field_type: a.name.as_type(),
+        });
 
         let fields = self.fields.iter().cloned().chain(arena_fields).collect();
 
@@ -591,7 +588,6 @@ pub mod tests {
     struct Duration;
 
     pub fn get_world() -> World {
-
         Default::default()
 
         // let mut system = Arena::<Permanent>::new("System");

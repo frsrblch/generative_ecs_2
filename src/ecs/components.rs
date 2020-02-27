@@ -1,8 +1,8 @@
+use super::{Get, GetOpt, Insert};
 use crate::ecs::ids::{Id, Valid};
 use rayon::iter::*;
 use std::marker::PhantomData;
 use std::ops::{Index, IndexMut};
-use super::{Insert, Get, GetOpt};
 
 #[derive(Debug, Clone)]
 pub struct Component<ID, T> {
@@ -43,64 +43,48 @@ impl<ID, T> Component<ID, T> {
 impl<ID, T> GetOpt<Id<ID>, T> for Component<ID, Option<T>> {
     #[inline(always)]
     fn get_opt(&self, id: Id<ID>) -> Option<&T> {
-        self.values
-            .get(id.index)
-            .and_then(|o| o.as_ref())
+        self.values.get(id.index).and_then(|o| o.as_ref())
     }
 
     #[inline(always)]
     fn get_opt_mut(&mut self, id: Id<ID>) -> Option<&mut T> {
-        self.values
-            .get_mut(id.index)
-            .and_then(|o| o.as_mut())
+        self.values.get_mut(id.index).and_then(|o| o.as_mut())
     }
 }
 
 impl<ID, T> GetOpt<&Id<ID>, T> for Component<ID, Option<T>> {
     #[inline(always)]
     fn get_opt(&self, id: &Id<ID>) -> Option<&T> {
-        self.values
-            .get(id.index)
-            .and_then(|o| o.as_ref())
+        self.values.get(id.index).and_then(|o| o.as_ref())
     }
 
     #[inline(always)]
     fn get_opt_mut(&mut self, id: &Id<ID>) -> Option<&mut T> {
-        self.values
-            .get_mut(id.index)
-            .and_then(|o| o.as_mut())
+        self.values.get_mut(id.index).and_then(|o| o.as_mut())
     }
 }
 
 impl<ID, T> GetOpt<Valid<'_, ID>, T> for Component<ID, Option<T>> {
     #[inline(always)]
     fn get_opt(&self, id: Valid<ID>) -> Option<&T> {
-        self.values
-            .get(id.id.index)
-            .and_then(|o| o.as_ref())
+        self.values.get(id.id.index).and_then(|o| o.as_ref())
     }
 
     #[inline(always)]
     fn get_opt_mut(&mut self, id: Valid<ID>) -> Option<&mut T> {
-        self.values
-            .get_mut(id.id.index)
-            .and_then(|o| o.as_mut())
+        self.values.get_mut(id.id.index).and_then(|o| o.as_mut())
     }
 }
 
 impl<ID, T> GetOpt<&Valid<'_, ID>, T> for Component<ID, Option<T>> {
     #[inline(always)]
     fn get_opt(&self, id: &Valid<ID>) -> Option<&T> {
-        self.values
-            .get(id.id.index)
-            .and_then(|o| o.as_ref())
+        self.values.get(id.id.index).and_then(|o| o.as_ref())
     }
 
     #[inline(always)]
     fn get_opt_mut(&mut self, id: &Valid<ID>) -> Option<&mut T> {
-        self.values
-            .get_mut(id.id.index)
-            .and_then(|o| o.as_mut())
+        self.values.get_mut(id.id.index).and_then(|o| o.as_mut())
     }
 }
 

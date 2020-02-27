@@ -15,10 +15,8 @@ impl<T> FixedAllocator<T> {
         id
     }
 
-    pub fn ids(&self) -> impl Iterator<Item=Id<T>> {
-        (0..self.next_index)
-            .into_iter()
-            .map(|i| Id::new(i))
+    pub fn ids(&self) -> impl Iterator<Item = Id<T>> {
+        (0..self.next_index).into_iter().map(|i| Id::new(i))
     }
 }
 
@@ -83,12 +81,10 @@ impl<T> GenAllocator<T> {
     }
 
     pub fn ids<'a>(&'a self) -> impl Iterator<Item = Valid<T>> + 'a {
-        self.living
-            .iter()
-            .filter_map(move |index| {
-                let gen = self.generation.get(index)?;
-                let id = GenId::new(index, *gen);
-                Some(Valid::new(id))
-            })
+        self.living.iter().filter_map(move |index| {
+            let gen = self.generation.get(index)?;
+            let id = GenId::new(index, *gen);
+            Some(Valid::new(id))
+        })
     }
 }

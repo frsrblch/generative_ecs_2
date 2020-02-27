@@ -1,5 +1,5 @@
-use physics::*;
 use generative_ecs_2::ecs::*;
+use physics::*;
 
 #[derive(Debug, Default, Clone)]
 pub struct World {
@@ -14,10 +14,10 @@ impl World {
 
     pub fn create_body(&mut self, entity: BodyEntity) -> Id<Body> {
         let (alloc, state) = self.split();
-        
+
         let id = alloc.body.create();
         state.body.insert(&id, entity.body);
-        
+
         if let Some(orbit) = entity.orbit {
             let child_id = alloc.orbit.create();
             state.orbit.insert(&child_id, orbit);
@@ -25,7 +25,7 @@ impl World {
             state.body.orbit.insert(&id, Some(child_id.id()));
             state.orbit.body.insert(&child_id, id.id());
         }
-        
+
         if let Some(surface) = entity.surface {
             let child_id = alloc.surface.create();
             state.surface.insert(&child_id, surface);
@@ -33,7 +33,7 @@ impl World {
             state.body.surface.insert(&id, Some(child_id.id()));
             state.surface.body.insert(&child_id, id.id());
         }
-        
+
         id
     }
 
