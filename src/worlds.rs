@@ -39,11 +39,13 @@ impl Display for World {
             writeln!(f, "{}", row).ok();
         }
 
-        for (entity, enums) in self.generate_entities() {
+        for entity in self.generate_entities() {
             writeln!(f, "{}", entity).ok();
-            for e in enums {
-                writeln!(f, "{}", e).ok();
-            }
+        }
+
+        for (row_enum, id_enum) in self.generate_entity_enums() {
+            writeln!(f, "{}", row_enum).ok();
+            writeln!(f, "{}", id_enum).ok();
         }
 
         Ok(())
@@ -271,14 +273,14 @@ impl World {
             .collect()
     }
 
-    pub fn generate_entities(&self) -> Vec<(Struct, Vec<Enum>)> {
+    pub fn generate_entities(&self) -> Vec<Struct> {
         self.entities
             .iter()
             .map(|e| self.generate_entity(e))
             .collect()
     }
 
-    pub fn generate_entity(&self, entity: &EntityCore) -> (Struct, Vec<Enum>) {
+    pub fn generate_entity(&self, entity: &EntityCore) -> Struct {
         let mut fields = vec![Field {
             visibility: Pub,
             name: entity.base.as_field_name(),
@@ -295,27 +297,30 @@ impl World {
         let enum_fields = entity.enums.iter().map(|e| Field {
             visibility: Default::default(),
             name: e.name.into_snake_case(),
-            field_type: Type::new(e.name.as_str())
+            field_type: Type::new(&e.get_id_enum(self).typ.to_string())
         });
         fields.extend(enum_fields);
 
-        let entity_struct = Struct::new(entity.name().as_str())
+        Struct::new(entity.name().as_str())
             .with_derives(Derives::with_debug_clone())
-            .with_fields(fields);
-
-        (entity_struct, self.generate_entity_enums(entity))
+            .with_fields(fields)
     }
 
-    pub fn generate_entity_enums(&self, entity: &EntityCore) -> Vec<Enum> {
-        entity.enums.iter()
-            .map(|e| {
-                e.options.iter()
-                    .fold(
-                        Enum::new(e.name.as_str()).with_derives(Derives::with_debug_clone()),
-                        |enum_type, o| {
-                            let arena_row = self.generate_arena_row(&self.get_arena(o));
-                            enum_type.add_option(EnumOption::new(o.as_str(), vec![&arena_row.typ.to_string()]))
-                        })
+    pub fn generate_entity_enum_rows(&self, entity: &EntityCore) -> Vec<Enum> {
+        entity
+            .enums
+            .iter()
+            .map(|e| e.get_row_enum(self))
+            .collect()
+    }
+
+    fn generate_entity_enums(&self) -> Vec<(Enum, Enum)> {
+        self.entities
+            .iter()
+            .flat_map(|e| {
+                e.enums
+                    .iter()
+                    .map(|e| (e.get_row_enum(self), e.get_id_enum(self)))
             })
             .collect()
     }
@@ -398,7 +403,7 @@ impl World {
             .collect()
     }
 
-    fn generate_arena_row(&self, arena: &ArenaCore) -> Struct {
+    pub(crate) fn generate_arena_row(&self, arena: &ArenaCore) -> Struct {
         let component_fields = arena
             .components
             .iter()
@@ -526,7 +531,7 @@ pub mod tests {
         world
             .generate_arenas()
             .iter()
-            .for_each(|a| println!("{}\n{}", a.0, a.1));
+            .for_each(|(a, b,c)| println!("{}\n{}\n{}", a, b, c));
 
         //        assert!(false);
     }
@@ -538,12 +543,7 @@ pub mod tests {
         world
             .generate_entities()
             .iter()
-            .for_each(|a| {
-                println!("{}", a.0);
-                for e in &a.1 {
-                    println!("{}", e);
-                }
-            });
+            .for_each(|a| println!("{}", 0));
 
         //        assert!(false);
     }

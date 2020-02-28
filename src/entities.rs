@@ -1,7 +1,8 @@
 use crate::arenas::*;
 use crate::lifetimes::*;
-use code_gen::{CamelCase, Type};
+use code_gen::*;
 use std::marker::PhantomData;
+use crate::worlds::World;
 
 //	From	    To	        Relationsh	Use Case	                                        Example
 //	Permanent	Permanent	MaybeOwns	A -> Opt<B>	                                        not all bodies have an atmosphere
@@ -123,12 +124,49 @@ impl EntityEnum {
         }
     }
 
-    fn get_type(&self) -> Type {
+    pub fn get_row_type(&self) -> Type {
+        Type::new(&format!("{}Row", self.name))
+    }
+
+    pub fn get_row_enum(&self, world: &World) -> Enum {
+        let typ = self.get_row_type();
+        let row_enum = Enum::new(&typ.to_string())
+            .with_derives(Derives::with_debug_clone());
+
+        self.options
+            .iter()
+            .fold(row_enum, |row_enum, o| {
+                let arena_row = world.generate_arena_row(&world.get_arena(o));
+                row_enum.add_option(EnumOption::new(o.as_str(), vec![&arena_row.typ.to_string()]))
+            })
+    }
+
+    pub fn get_id_enum(&self, world: &World) -> Enum {
+        let typ = self.get_id_enum_type();
+        let id_enum = Enum::new(&typ.to_string()).with_derives(Self::id_derives());
+        self.options
+            .iter()
+            .fold(id_enum, |id_enum, o| {
+                let arena_id = world.get_id(o);
+                id_enum.add_option(EnumOption::new(o.as_str(), vec![&arena_id.to_string()]))
+            })
+    }
+
+    fn id_derives() -> Derives {
+        let mut derives = Derives::with_debug_clone();
+        derives.insert(Derive::Copy);
+        derives.insert(Derive::Hash);
+        derives.insert(Derive::Eq);
+        derives.insert(Derive::Ord);
+        derives
+    }
+
+    fn get_id_enum_type(&self) -> Type {
         Type::new(self.name.as_str())
     }
 
     pub fn get_component_type(&self) -> Type {
-        Type::new(&format!("Component<Self,{}>", self.get_type()))
+        Type::new(&format!("Component<Self,{}>", self.get_id_enum_type()))
     }
 }
 
@@ -139,13 +177,13 @@ mod tests {
 
     #[test]
     fn simple_enum() {
-        let parent = Arena::<Permanent>::new("Parent");
+        let parent = Arena::<Permanent>::new("Fleet");
 
-        let state_1 = Arena::<Transient>::new("StateOne");
-        let state_2 = Arena::<Transient>::new("StateTwo");
+        let state_1 = Arena::<Transient>::new("FleetOrbit");
+        let state_2 = Arena::<Transient>::new("FleetTransit");
 
         let mut parent_entity = Entity::new(&parent);
-        let states = EntityEnum::new("ChildEnum", vec![&state_1, &state_2]);
+        let states = EntityEnum::new("FleetLocation", vec![&state_1, &state_2]);
         parent_entity.add_enum(states);
 
         let mut world = World::default();
