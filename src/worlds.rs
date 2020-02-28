@@ -335,7 +335,7 @@ impl World {
             .map(|e| Field {
                 visibility: Pub,
                 name: e.name.into_snake_case(),
-                field_type: Type::new(e.name.as_str()),
+                field_type: e.get_component_type()
             });
 
         let own_links = self

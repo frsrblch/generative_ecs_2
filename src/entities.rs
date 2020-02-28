@@ -1,6 +1,6 @@
 use crate::arenas::*;
 use crate::lifetimes::*;
-use code_gen::CamelCase;
+use code_gen::{CamelCase, Type};
 use std::marker::PhantomData;
 
 //	From	    To	        Relationsh	Use Case	                                        Example
@@ -121,6 +121,14 @@ impl EntityEnum {
             name: CamelCase::new(enum_type),
             options
         }
+    }
+
+    fn get_type(&self) -> Type {
+        Type::new(self.name.as_str())
+    }
+
+    pub fn get_component_type(&self) -> Type {
+        Type::new(&format!("Component<Self,{}>", self.get_type()))
     }
 }
 
