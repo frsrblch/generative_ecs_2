@@ -1,9 +1,11 @@
 mod allocators;
 mod components;
+mod maps;
 mod ids;
 
 pub use allocators::*;
 pub use components::*;
+pub use maps::*;
 pub use ids::*;
 
 pub trait Insert<ID, T> {
