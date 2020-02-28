@@ -327,6 +327,17 @@ impl World {
             field_type: comp.get_component_type(),
         });
 
+        let entity_enums = self
+            .entities
+            .iter()
+            .filter(|e| e.base.eq(&arena.name))
+            .flat_map(|e| e.enums.iter())
+            .map(|e| Field {
+                visibility: Pub,
+                name: e.name.into_snake_case(),
+                field_type: Type::new(e.name.as_str()),
+            });
+
         let own_links = self
             .entities
             .iter()
@@ -345,6 +356,7 @@ impl World {
                 e.children
                     .iter()
                     .chain(e.collections.iter())
+                    .chain(e.enums.iter().flat_map(|e| e.options.iter()))
                     .map(move |c| (e, c))
             })
             .filter(|(_e, c)| arena.name.eq(c))
@@ -356,6 +368,7 @@ impl World {
 
         let fields = entity_links
             .chain(component_fields)
+            .chain(entity_enums)
             .chain(own_links)
             .collect();
 

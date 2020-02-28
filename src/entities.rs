@@ -149,12 +149,7 @@ mod tests {
         world.insert_entity(parent_entity);
 
 
-        let (e, enums) = world.generate_entities().into_iter().nth(0).unwrap();
-
-        println!("{}", e);
-        for e in enums {
-            println!("{}", e);
-        }
+        println!("{}", world);
 
         assert!(false);
     }
