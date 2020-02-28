@@ -30,6 +30,7 @@ pub struct EntityCore {
     pub base: ArenaName,
     pub children: Vec<ArenaName>,    // one to maybe one
     pub collections: Vec<ArenaName>, // one to many
+    pub enums: Vec<EntityEnum>,
 }
 
 impl EntityCore {
@@ -38,6 +39,7 @@ impl EntityCore {
             base: arena.name.clone(),
             children: vec![],
             collections: vec![],
+            enums: vec![],
         }
     }
 
@@ -71,6 +73,10 @@ impl<L: Lifetime> Entity<L> {
             .chain(self.entity.children.iter())
             .chain(self.entity.collections.iter())
     }
+
+    pub fn add_enum(&mut self, entity_enum: EntityEnum) {
+        self.entity.enums.push(entity_enum);
+    }
 }
 
 impl Entity<Permanent> {
@@ -95,5 +101,61 @@ impl Entity<Transient> {
     // 1 to [0..]
     pub fn add_collection(&mut self, child: &Arena<Transient>) {
         self.entity.collections.push(child.name());
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct EntityEnum {
+    pub name: CamelCase,
+    pub options: Vec<ArenaName>
+}
+
+impl EntityEnum {
+    pub fn new(enum_type: &str, options: Vec<&Arena<Transient>>) -> Self {
+        let options = options
+            .into_iter()
+            .map(|a| a.name())
+            .collect();
+
+        Self {
+            name: CamelCase::new(enum_type),
+            options
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::prelude::{World};
+
+    #[test]
+    fn simple_enum() {
+        let parent = Arena::<Permanent>::new("Parent");
+
+        let state_1 = Arena::<Transient>::new("StateOne");
+        let state_2 = Arena::<Transient>::new("StateTwo");
+
+        let mut parent_entity = Entity::new(&parent);
+        let states = EntityEnum::new("ChildEnum", vec![&state_1, &state_2]);
+        parent_entity.add_enum(states);
+
+        let mut world = World::default();
+
+        world.insert_arena(parent);
+        world.insert_arena(state_1);
+        world.insert_arena(state_2);
+
+        world.insert_entity(parent_entity);
+
+
+        let (e, enums) = world.generate_entities().into_iter().nth(0).unwrap();
+
+        println!("{}", e);
+        for e in enums {
+            println!("{}", e);
+        }
+
+        assert!(false);
     }
 }

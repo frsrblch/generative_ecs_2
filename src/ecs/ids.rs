@@ -11,7 +11,7 @@ pub struct Id<T> {
     marker: PhantomData<T>,
 }
 
-impl<T: Any> Display for Id<T> {
+impl<T> Display for Id<T> {
     fn fmt(&self, f: &mut Formatter) -> Result {
         write!(f, "Id::<{}>::({})", type_name::<T>(), self.index)
     }

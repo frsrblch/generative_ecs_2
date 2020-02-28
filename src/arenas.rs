@@ -279,24 +279,15 @@ impl Display for ArenaName {
 
 #[cfg(test)]
 mod tests {
-    use crate::arenas::Arena;
-    use crate::lifetimes::Permanent;
-
-    struct Position;
-    struct Mass;
-
-    struct Length;
-
-    #[derive(Default)]
-    struct SurfaceId;
+    use crate::prelude::*;
 
     #[test]
     fn testing() {
         let mut body = Arena::<Permanent>::new("Body");
-        body.add_required_component::<Mass>();
-        body.add_required_component::<Position>();
-        body.add_required_component_with_field::<Length>("radius");
-        body.add_default_component_with_field::<String>("name");
+        body.add_required_component("Mass");
+        body.add_required_component("Position");
+        body.add_required_component_with_field("radius", "Length");
+        body.add_default_component_with_field("name", "String");
 
         dbg!(body);
         //        assert!(false);
