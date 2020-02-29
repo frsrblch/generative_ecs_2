@@ -1,11 +1,10 @@
-use crate::lifetimes::*;
+use crate::lifespans::*;
 use code_gen::Visibility::Pub;
 use code_gen::*;
 use std::fmt::*;
 use std::marker::PhantomData;
 use std::str::FromStr;
 
-// TODO replace generic methods with type strings, it doesn't work with type aliases as found in physics
 
 #[derive(Debug, Clone)]
 pub struct Component {
@@ -79,12 +78,12 @@ impl ArenaCore {
 }
 
 #[derive(Debug)]
-pub struct Arena<L: Lifetime> {
+pub struct Arena<L: Lifespan> {
     pub arena: ArenaCore,
     marker: PhantomData<L>,
 }
 
-impl<L: Lifetime> Arena<L> {
+impl<L: Lifespan> Arena<L> {
     pub fn new(name: &str) -> Self {
         Self {
             arena: ArenaCore::new(name),
@@ -187,7 +186,7 @@ impl<L: Lifetime> Arena<L> {
         });
     }
 
-    pub fn add_reference(&mut self, arena: &Arena<impl Lifetime>) {
+    pub fn add_reference(&mut self, arena: &Arena<impl Lifespan>) {
         self.arena.components.push(Component {
             field_name: arena.name().as_field_name(),
             source: Source::ByValue,
@@ -196,7 +195,7 @@ impl<L: Lifetime> Arena<L> {
         });
     }
 
-    pub fn add_reference_with_field(&mut self, field: &str, arena: &Arena<impl Lifetime>) {
+    pub fn add_reference_with_field(&mut self, field: &str, arena: &Arena<impl Lifespan>) {
         self.arena.components.push(Component {
             field_name: field
                 .parse()
@@ -207,7 +206,7 @@ impl<L: Lifetime> Arena<L> {
         });
     }
 
-    pub fn add_optional_reference(&mut self, arena: &Arena<impl Lifetime>) {
+    pub fn add_optional_reference(&mut self, arena: &Arena<impl Lifespan>) {
         self.arena.components.push(Component {
             field_name: arena.name().as_field_name(),
             source: Source::ByValue,
@@ -216,7 +215,7 @@ impl<L: Lifetime> Arena<L> {
         });
     }
 
-    pub fn add_optional_reference_with_field(&mut self, field: &str, arena: &Arena<impl Lifetime>) {
+    pub fn add_optional_reference_with_field(&mut self, field: &str, arena: &Arena<impl Lifespan>) {
         self.arena.components.push(Component {
             field_name: field
                 .parse()

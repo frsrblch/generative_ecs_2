@@ -1,6 +1,6 @@
 use generative_ecs_2::arenas::Arena;
 use generative_ecs_2::entities::Entity;
-use generative_ecs_2::lifetimes::*;
+use generative_ecs_2::lifespans::*;
 use generative_ecs_2::worlds::World;
 
 // cargo run --example gen && cargo check --example target

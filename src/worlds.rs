@@ -1,11 +1,13 @@
 use crate::arenas::*;
 use crate::entities::{Entity, EntityCore};
-use crate::lifetimes::*;
+use crate::lifespans::*;
 use code_gen::Visibility::Pub;
 use code_gen::*;
 use std::collections::HashMap;
 use std::fmt::*;
 use std::str::FromStr;
+
+// TODO move create function to Arena, taking &mut to the allocator
 
 #[derive(Debug, Default)]
 pub struct World {
@@ -22,20 +24,23 @@ pub struct World {
 
 impl Display for World {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        self.use_statements.iter().for_each(|u| {
+        for u in self.use_statements.iter() {
             writeln!(f, "{}", u).ok();
-        });
+        }
+
         writeln!(f, "use generative_ecs_2::ecs::*;\n").ok();
 
         writeln!(f, "{}", self.generate_world()).ok();
-        writeln!(f, "{}", self.generate_world_impl()).ok();
 
         writeln!(f, "{}", self.generate_allocators()).ok();
+
         writeln!(f, "{}", self.generate_state()).ok();
 
-        for (arena, arena_impl, row) in self.generate_arenas() {
+        for arena in self.generate_arenas() {
             writeln!(f, "{}", arena).ok();
-            writeln!(f, "{}", arena_impl).ok();
+        }
+
+        for row in self.generate_arena_rows() {
             writeln!(f, "{}", row).ok();
         }
 
@@ -43,8 +48,11 @@ impl Display for World {
             writeln!(f, "{}", entity).ok();
         }
 
-        for (row_enum, id_enum) in self.generate_entity_enums() {
+        for row_enum in self.generate_entity_row_enums() {
             writeln!(f, "{}", row_enum).ok();
+        }
+
+        for id_enum in self.generate_entity_id_enums() {
             writeln!(f, "{}", id_enum).ok();
         }
 
@@ -85,7 +93,7 @@ impl World {
         self.fields.push(field);
     }
 
-    pub fn insert_arena<L: Lifetime>(&mut self, arena: Arena<L>) {
+    pub fn insert_arena<L: Lifespan>(&mut self, arena: Arena<L>) {
         if self.contains_arena(&arena.arena.name) {
             panic!(format!("Duplicate arena name: {}", arena.arena.name));
         }
@@ -99,7 +107,7 @@ impl World {
         self.arenas.push(arena.arena);
     }
 
-    pub fn insert_entity<L: Lifetime>(&mut self, entity: Entity<L>) {
+    pub fn insert_entity<L: Lifespan>(&mut self, entity: Entity<L>) {
         if !entity.get_arenas().all(|a| self.contains_arena(a)) {
             panic!(
                 "Arena must be inserted before Entity: {}",
@@ -110,7 +118,15 @@ impl World {
         self.entities.push(entity.entity);
     }
 
-    pub fn generate_world(&self) -> Struct {
+    pub fn generate_world(&self) -> StructType {
+        StructType {
+            base: self.generate_world_struct(),
+            enum_impl: Some(self.generate_world_impl()),
+            enum_traits: vec![]
+        }
+    }
+
+    pub fn generate_world_struct(&self) -> Struct {
         Struct::new(WORLD)
             .with_derives(Derives::with_debug_default_clone())
             .add_field(Field::from_type(Type::new(ALLOCATORS)))
@@ -260,67 +276,59 @@ impl World {
             .with_fields(fields)
     }
 
-    pub fn generate_arenas(&self) -> Vec<(Struct, Impl, Struct)> {
+    pub fn generate_arenas(&self) -> Vec<StructType> {
         self.arenas
             .iter()
             .map(|a| {
-                (
-                    self.generate_arena(a),
-                    self.generate_arena_impl(a),
-                    self.generate_arena_row(a),
-                )
+                StructType {
+                    base: self.generate_arena(a),
+                    enum_impl: Some(self.generate_arena_impl(a)),
+                    enum_traits: vec![]
+                }
             })
             .collect()
     }
 
-    pub fn generate_entities(&self) -> Vec<Struct> {
+    pub fn generate_arena_rows(&self) -> Vec<Struct> {
+        self.arenas
+            .iter()
+            .map(|a| self.generate_arena_row(a))
+            .collect()
+    }
+
+    pub fn generate_entities(&self) -> Vec<StructType> {
         self.entities
             .iter()
-            .map(|e| self.generate_entity(e))
+            .map(|e| {
+                StructType {
+                    base: e.generate_struct(),
+                    enum_impl: None,
+                    enum_traits: vec![]
+                }
+            })
             .collect()
     }
 
-    pub fn generate_entity(&self, entity: &EntityCore) -> Struct {
-        let mut fields = vec![Field {
-            visibility: Pub,
-            name: entity.base.as_field_name(),
-            field_type: entity.base.get_row_type(),
-        }];
-
-        let child_fields = entity.children.iter().map(|c| Field {
-            visibility: Pub,
-            name: c.as_field_name(),
-            field_type: Type::new(&format!("Option<{}>", c.get_row_type())),
-        });
-        fields.extend(child_fields);
-
-        let enum_fields = entity.enums.iter().map(|e| Field {
-            visibility: Default::default(),
-            name: e.name.into_snake_case(),
-            field_type: Type::new(&e.get_id_enum(self).typ.to_string())
-        });
-        fields.extend(enum_fields);
-
-        Struct::new(entity.name().as_str())
-            .with_derives(Derives::with_debug_clone())
-            .with_fields(fields)
-    }
-
-    pub fn generate_entity_enum_rows(&self, entity: &EntityCore) -> Vec<Enum> {
-        entity
-            .enums
-            .iter()
-            .map(|e| e.get_row_enum(self))
-            .collect()
-    }
-
-    fn generate_entity_enums(&self) -> Vec<(Enum, Enum)> {
+    pub fn generate_entity_id_enums(&self) -> Vec<EnumType> {
         self.entities
             .iter()
             .flat_map(|e| {
-                e.enums
+                e
+                    .enums
                     .iter()
-                    .map(|e| (e.get_row_enum(self), e.get_id_enum(self)))
+                    .map(|e| e.get_id_enum(self))
+            })
+            .collect()
+    }
+
+    pub fn generate_entity_row_enums(&self) -> Vec<EnumType> {
+        self.entities
+            .iter()
+            .flat_map(|e| {
+                e
+                    .enums
+                    .iter()
+                    .map(|e| e.get_row_enum(self))
             })
             .collect()
     }
@@ -382,7 +390,15 @@ impl World {
             .with_derives(Derives::with_debug_default_clone())
     }
 
-    pub fn generate_state(&self) -> Struct {
+    pub fn generate_state(&self) -> StructType {
+        StructType {
+            base: self.generate_state_struct(),
+            enum_impl: None,
+            enum_traits: vec![]
+        }
+    }
+
+    pub fn generate_state_struct(&self) -> Struct {
         let arena_fields = self.arenas.iter().map(|a| Field {
             visibility: Pub,
             name: a.name.as_field_name(),
@@ -394,13 +410,6 @@ impl World {
         Struct::new(STATE)
             .with_derives(Derives::with_debug_default_clone())
             .with_fields(fields)
-    }
-
-    pub fn generate_arena_rows(&self) -> Vec<Struct> {
-        self.arenas
-            .iter()
-            .map(|a| self.generate_arena_row(a))
-            .collect()
     }
 
     pub(crate) fn generate_arena_row(&self, arena: &ArenaCore) -> Struct {
@@ -418,7 +427,9 @@ impl World {
     }
 
     fn generate_arena_impl(&self, arena: &ArenaCore) -> Impl {
-        Impl::from(&self.generate_arena(arena).typ).add_function(self.get_insert_function(arena))
+        Impl::from(&Type::new(arena.name.as_str()))
+            .add_function(self.get_insert_function(arena))
+            .add_function(self.get_create_function(arena))
     }
 
     fn get_insert_function(&self, arena: &ArenaCore) -> Function {
@@ -465,6 +476,19 @@ impl World {
         func
     }
 
+    fn get_create_function(&self, arena: &ArenaCore) -> Function {
+        unimplemented!()
+
+        Function::new("create")
+            .with_parameters(&format!(
+                "&mut self, row: {}, alloc: &'a mut {}",
+                self.generate_arena_row(arena).typ,
+                self.get_allocator(&arena.name)
+            ))
+            .with_generics(Generics::one("'a"))
+            .with_return(self.get_valid_id_with_lifetime(&arena.name).to_string())
+    }
+
     pub fn get_arena(&self, arena: &ArenaName) -> &ArenaCore {
         self.arenas.iter().find(|a| a.name == *arena).unwrap()
     }
@@ -493,6 +517,14 @@ impl World {
     pub fn get_valid_id(&self, arena: &ArenaName) -> Type {
         self.valid_id.get(arena).unwrap().clone()
     }
+
+    pub fn get_valid_id_with_lifetime(&self, arena: &ArenaName) -> Type {
+        let mut id = self.valid_id.get(arena).unwrap().clone();
+        if id.name.as_str() == "Valid" {
+            id.types.push_front("'a");
+        }
+        id
+    }
 }
 
 const WORLD: &'static str = "World";
@@ -505,7 +537,7 @@ pub mod tests {
 
     #[test]
     fn generate_world() {
-        let s = World::new().generate_world();
+        let s = World::new().generate_world_struct();
         println!("{}", s);
         //        assert!(false);
     }
@@ -519,7 +551,7 @@ pub mod tests {
 
     #[test]
     fn generate_state() {
-        let s = get_world().generate_state();
+        let s = get_world().generate_state_struct();
         println!("{}", s);
         //        assert!(false);
     }
@@ -531,7 +563,7 @@ pub mod tests {
         world
             .generate_arenas()
             .iter()
-            .for_each(|(a, b,c)| println!("{}\n{}\n{}", a, b, c));
+            .for_each(|a| println!("{}", a));
 
         //        assert!(false);
     }
@@ -543,7 +575,7 @@ pub mod tests {
         world
             .generate_entities()
             .iter()
-            .for_each(|a| println!("{}", 0));
+            .for_each(|a| println!("{}", a));
 
         //        assert!(false);
     }

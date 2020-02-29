@@ -1,7 +1,7 @@
 use crate::arenas::ArenaName;
 use code_gen::Type;
 
-pub trait Lifetime: Default {
+pub trait Lifespan: Default {
     fn id_type(arena: &ArenaName) -> Type;
     fn valid_id_type(arena: &ArenaName) -> Type;
     fn allocator(arena: &ArenaName) -> Type;
@@ -10,7 +10,7 @@ pub trait Lifetime: Default {
 #[derive(Debug, Default)]
 pub struct Permanent;
 
-impl Lifetime for Permanent {
+impl Lifespan for Permanent {
     fn id_type(arena: &ArenaName) -> Type {
         format!("Id<{}>", arena).parse().unwrap()
     }
@@ -27,7 +27,7 @@ impl Lifetime for Permanent {
 #[derive(Debug, Default)]
 pub struct Transient;
 
-impl Lifetime for Transient {
+impl Lifespan for Transient {
     fn id_type(arena: &ArenaName) -> Type {
         format!("GenId<{}>", arena).parse().unwrap()
     }

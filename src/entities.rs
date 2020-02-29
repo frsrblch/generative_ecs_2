@@ -1,8 +1,9 @@
 use crate::arenas::*;
-use crate::lifetimes::*;
+use crate::lifespans::*;
 use code_gen::*;
 use std::marker::PhantomData;
 use crate::worlds::World;
+use code_gen::Visibility::Pub;
 
 //	From	    To	        Relationsh	Use Case	                                        Example
 //	Permanent	Permanent	MaybeOwns	A -> Opt<B>	                                        not all bodies have an atmosphere
@@ -53,15 +54,41 @@ impl EntityCore {
             || self.children.contains(&arena)
             || self.collections.contains(&arena);
     }
+
+    pub fn generate_struct(&self) -> Struct {
+        let mut fields = vec![Field {
+            visibility: Pub,
+            name: self.base.as_field_name(),
+            field_type: self.base.get_row_type(),
+        }];
+
+        let child_fields = self.children.iter().map(|c| Field {
+            visibility: Pub,
+            name: c.as_field_name(),
+            field_type: Type::new(&format!("Option<{}>", c.get_row_type())),
+        });
+        fields.extend(child_fields);
+
+        let enum_fields = self.enums.iter().map(|e| Field {
+            visibility: Default::default(),
+            name: e.name.into_snake_case(),
+            field_type: e.get_row_type(),
+        });
+        fields.extend(enum_fields);
+
+        Struct::new(self.name().as_str())
+            .with_derives(Derives::with_debug_clone())
+            .with_fields(fields)
+    }
 }
 
 #[derive(Debug)]
-pub struct Entity<L: Lifetime> {
+pub struct Entity<L: Lifespan> {
     pub entity: EntityCore,
     marker: PhantomData<L>,
 }
 
-impl<L: Lifetime> Entity<L> {
+impl<L: Lifespan> Entity<L> {
     pub fn new(arena: &Arena<L>) -> Self {
         Entity {
             entity: EntityCore::new(&arena.arena),
@@ -82,12 +109,12 @@ impl<L: Lifetime> Entity<L> {
 
 impl Entity<Permanent> {
     // 1 to Option
-    pub fn add_child(&mut self, child: &Arena<impl Lifetime>) {
+    pub fn add_child(&mut self, child: &Arena<impl Lifespan>) {
         self.entity.children.push(child.name());
     }
 
     // 1 to [0..]
-    pub fn add_collection(&mut self, child: &Arena<impl Lifetime>) {
+    pub fn add_collection(&mut self, child: &Arena<impl Lifespan>) {
         self.entity.collections.push(child.name());
     }
 }
@@ -111,6 +138,10 @@ pub struct EntityEnum {
     pub options: Vec<ArenaName>
 }
 
+// TODO impl From<VALID_ID> and From<Row> for entity enums
+// TODO add function World::create_ENTITY_ENUM_ROW
+// TODO for create_ENTITY, create and link to ENTITY_ENUM_ID
+
 impl EntityEnum {
     pub fn new(enum_type: &str, options: Vec<&Arena<Transient>>) -> Self {
         let options = options
@@ -128,28 +159,41 @@ impl EntityEnum {
         Type::new(&format!("{}Row", self.name))
     }
 
-    pub fn get_row_enum(&self, world: &World) -> Enum {
+    pub fn get_row_enum(&self, world: &World) -> EnumType {
         let typ = self.get_row_type();
         let row_enum = Enum::new(&typ.to_string())
             .with_derives(Derives::with_debug_clone());
 
-        self.options
+        let base = self.options
             .iter()
             .fold(row_enum, |row_enum, o| {
                 let arena_row = world.generate_arena_row(&world.get_arena(o));
                 row_enum.add_option(EnumOption::new(o.as_str(), vec![&arena_row.typ.to_string()]))
-            })
+            });
+        
+        EnumType {
+            base,
+            enum_impl: None,
+            enum_traits: vec![]
+        }
     }
 
-    pub fn get_id_enum(&self, world: &World) -> Enum {
+    pub fn get_id_enum(&self, world: &World) -> EnumType {
         let typ = self.get_id_enum_type();
         let id_enum = Enum::new(&typ.to_string()).with_derives(Self::id_derives());
-        self.options
+        
+        let base = self.options
             .iter()
             .fold(id_enum, |id_enum, o| {
                 let arena_id = world.get_id(o);
                 id_enum.add_option(EnumOption::new(o.as_str(), vec![&arena_id.to_string()]))
-            })
+            });
+        
+        EnumType {
+            base,
+            enum_impl: None,
+            enum_traits: vec![]
+        }
     }
 
     fn id_derives() -> Derives {
