@@ -221,37 +221,24 @@ impl World {
             .iter()
             .map(|child| self.get_arena(child))
             .fold(func, |mut func, child| {
+                let e = entity.base.as_field_name();
                 let c = child.name.as_field_name();
-                func = func.add_line(CodeLine::new(0, ""));
-                func = func.add_line(CodeLine::new(
-                    0,
-                    &format!("if let Some({c}) = entity.{c} {{", c = c),
-                ));
-                func = func.add_line(CodeLine::new(
-                    1,
-                    &format!("let child_id = alloc.{c}.create();", c = c),
-                ));
-                func = func.add_line(CodeLine::new(
-                    1,
-                    &format!("state.{c}.insert(&child_id, {c});\n", c = c),
-                ));
-                func = func.add_line(CodeLine::new(
-                    1,
-                    &format!(
+
+                func.add_line(CodeLine::new(0, ""))
+                    .add_line(CodeLine::new(0, &format!("if let Some({c}) = entity.{c} {{", c = c)))
+                    .add_line(CodeLine::new(1, &format!("let child_id = alloc.{c}.create();", c = c)))
+                    .add_line(CodeLine::new(1, &format!("state.{c}.insert(&child_id, {c});\n", c = c)))
+                    .add_line(CodeLine::new(1, &format!(
                         "state.{e}.{c}.insert(&id, Some(child_id.id()));",
-                        e = entity.base.as_field_name(),
+                        e = e,
                         c = c
-                    ),
-                ));
-                func = func.add_line(CodeLine::new(
-                    1,
-                    &format!(
+                    )))
+                    .add_line(CodeLine::new(1, &format!(
                         "state.{c}.{e}.insert(&child_id, id.id());",
-                        e = entity.base.as_field_name(),
+                        e = e,
                         c = c
-                    ),
-                ));
-                func.add_line(CodeLine::new(0, "}"))
+                    )))
+                    .add_line(CodeLine::new(0, "}"))
             });
 
         func = func.add_line(CodeLine::new(0, ""));
