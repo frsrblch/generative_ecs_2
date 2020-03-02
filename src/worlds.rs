@@ -477,8 +477,6 @@ impl World {
     }
 
     fn get_create_function(&self, arena: &ArenaCore) -> Function {
-        unimplemented!()
-
         Function::new("create")
             .with_parameters(&format!(
                 "&mut self, row: {}, alloc: &'a mut {}",
@@ -487,6 +485,9 @@ impl World {
             ))
             .with_generics(Generics::one("'a"))
             .with_return(self.get_valid_id_with_lifetime(&arena.name).to_string())
+            .add_line(CodeLine::new(0, "let id = alloc.create();"))
+            .add_line(CodeLine::new(0, "self.insert(&id, row);"))
+            .add_line(CodeLine::new(0, "id"))
     }
 
     pub fn get_arena(&self, arena: &ArenaName) -> &ArenaCore {

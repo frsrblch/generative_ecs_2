@@ -221,20 +221,24 @@ mod tests {
 
     #[test]
     fn simple_enum() {
-        let parent = Arena::<Permanent>::new("Fleet");
+        let mut parent = Arena::<Permanent>::new("Fleet");
+        parent.add_required_component_with_field("ships", "u16");
 
-        let state_1 = Arena::<Transient>::new("FleetOrbit");
-        let state_2 = Arena::<Transient>::new("FleetTransit");
+        let mut orbit = Arena::<Transient>::new("FleetOrbit");
+        orbit.add_required_component_with_field("period", "Time");
+
+        let mut transit = Arena::<Transient>::new("FleetTransit");
+        transit.add_required_component_with_field("arrival", "Time");
 
         let mut parent_entity = Entity::new(&parent);
-        let states = EntityEnum::new("FleetLocation", vec![&state_1, &state_2]);
+        let states = EntityEnum::new("FleetLocation", vec![&orbit, &transit]);
         parent_entity.add_enum(states);
 
         let mut world = World::default();
 
         world.insert_arena(parent);
-        world.insert_arena(state_1);
-        world.insert_arena(state_2);
+        world.insert_arena(orbit);
+        world.insert_arena(transit);
 
         world.insert_entity(parent_entity);
 
