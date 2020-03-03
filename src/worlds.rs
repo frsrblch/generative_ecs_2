@@ -228,7 +228,7 @@ impl World {
                     .add_line(CodeLine::new(0, &format!("match entity.{} {{", entity_enum.name.into_snake_case())));
 
                 entity_enum.options.iter().fold(func, |func, opt| {
-                    func.add_line(CodeLine::new(1, &format!("{}::{}(row) => {{", entity_enum.name, opt)))
+                    func.add_line(CodeLine::new(1, &format!("{}Row::{}(row) => {{", entity_enum.name, opt)))
                         .add_line(CodeLine::new(2, &format!("let {c} = state.{c}.create(row, &mut alloc.{c});", c=opt.as_field_name())))
                         .add_line(CodeLine::new(2, &format!("state.link_{e}_to_{c}(&id, &{c});", e=e, c=opt.as_field_name())))
                         .add_line(CodeLine::new(1, "}"))
