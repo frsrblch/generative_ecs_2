@@ -52,7 +52,8 @@ impl EntityCore {
     pub(crate) fn owns_arena(&self, arena: &ArenaName) -> bool {
         return self.base == *arena
             || self.children.contains(&arena)
-            || self.collections.contains(&arena);
+            || self.collections.contains(&arena)
+            || self.enums.iter().any(|e| e.options.contains(&arena));
     }
 
     pub fn generate_struct(&self) -> Struct {
@@ -231,8 +232,14 @@ mod tests {
         transit.add_required_component_with_field("arrival", "Time");
 
         let mut parent_entity = Entity::new(&parent);
+
+        // enum
         let states = EntityEnum::new("FleetLocation", vec![&orbit, &transit]);
         parent_entity.add_enum(states);
+
+        // // child
+        // parent_entity.add_child(&orbit);
+        // parent_entity.add_child(&transit);
 
         let mut world = World::default();
 

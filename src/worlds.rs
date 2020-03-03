@@ -8,6 +8,7 @@ use std::fmt::*;
 use std::str::FromStr;
 
 // TODO move create function to Arena, taking &mut to the allocator
+// TODO add State::link_PARENT_to_CHILD functions for entities
 
 #[derive(Debug, Default)]
 pub struct World {
@@ -196,54 +197,47 @@ impl World {
     }
 
     fn generate_entity_function(&self, entity: &EntityCore) -> Function {
+        let e = entity.base.as_field_name();
+
         let func = Function::new(&format!("create_{}", entity.base.as_field_name()))
             .with_parameters(&format!("&mut self, entity: {}", entity.name()))
             .with_return(self.get_valid_id(&entity.base).to_string())
             .add_line(CodeLine::new(0, "let (alloc, state) = self.split();"))
             .add_line(CodeLine::new(0, ""))
-            .add_line(CodeLine::new(
-                0,
-                &format!(
-                    "let id = alloc.{e}.create();",
-                    e = entity.base.as_field_name(),
-                ),
-            ))
-            .add_line(CodeLine::new(
-                0,
-                &format!(
-                    "state.{e}.insert(&id, entity.{e});",
-                    e = entity.base.as_field_name(),
-                ),
-            ));
+            .add_line(CodeLine::new(0, &format!("let id = state.{e}.create(entity.{e}, &mut alloc.{e});", e = e)));
 
-        let mut func = entity
+        let func = entity
             .children
             .iter()
             .map(|child| self.get_arena(child))
-            .fold(func, |mut func, child| {
-                let e = entity.base.as_field_name();
+            .fold(func, |func, child| {
                 let c = child.name.as_field_name();
 
                 func.add_line(CodeLine::new(0, ""))
-                    .add_line(CodeLine::new(0, &format!("if let Some({c}) = entity.{c} {{", c = c)))
-                    .add_line(CodeLine::new(1, &format!("let child_id = alloc.{c}.create();", c = c)))
-                    .add_line(CodeLine::new(1, &format!("state.{c}.insert(&child_id, {c});\n", c = c)))
-                    .add_line(CodeLine::new(1, &format!(
-                        "state.{e}.{c}.insert(&id, Some(child_id.id()));",
-                        e = e,
-                        c = c
-                    )))
-                    .add_line(CodeLine::new(1, &format!(
-                        "state.{c}.{e}.insert(&child_id, id.id());",
-                        e = e,
-                        c = c
-                    )))
+                    .add_line(CodeLine::new(0, &format!("if let Some({c}) = entity.{c} {{", c=c)))
+                    .add_line(CodeLine::new(1, &format!("let {c} = state.{c}.create({c}, &mut alloc.{c});", c=c)))
+                    .add_line(CodeLine::new(1, &format!("state.link_{e}_to_{c}(&id, &{c});", e=e, c=c)))
                     .add_line(CodeLine::new(0, "}"))
             });
 
-        func = func.add_line(CodeLine::new(0, ""));
+        let func = entity
+            .enums
+            .iter()
+            .fold(func, |func, entity_enum| {
+                let func = func
+                    .add_line(CodeLine::new(0, &format!("match entity.{} {{", entity_enum.name.into_snake_case())));
 
-        func.add_line(CodeLine::new(0, "id"))
+                entity_enum.options.iter().fold(func, |func, opt| {
+                    func.add_line(CodeLine::new(1, &format!("{}::{}(row) => {{", entity_enum.name, opt)))
+                        .add_line(CodeLine::new(2, &format!("let {c} = state.{c}.create(row, &mut alloc.{c});", c=opt.as_field_name())))
+                        .add_line(CodeLine::new(2, &format!("state.link_{e}_to_{c}(&id, &{c});", e=e, c=opt.as_field_name())))
+                        .add_line(CodeLine::new(1, "}"))
+                })
+                    .add_line(CodeLine::new(0, "}"))
+            });
+
+        func.add_line(CodeLine::new(0, ""))
+            .add_line(CodeLine::new(0, "id"))
     }
 
     pub fn generate_allocators(&self) -> Struct {
@@ -380,7 +374,7 @@ impl World {
     pub fn generate_state(&self) -> StructType {
         StructType {
             base: self.generate_state_struct(),
-            enum_impl: None,
+            enum_impl: Some(self.generate_state_impl()),
             enum_traits: vec![]
         }
     }
@@ -397,6 +391,82 @@ impl World {
         Struct::new(STATE)
             .with_derives(Derives::with_debug_default_clone())
             .with_fields(fields)
+    }
+
+    pub fn generate_state_impl(&self) -> Impl {
+        let state_impl = Impl::new(STATE);
+
+        // link entity children
+        let entity_child_links = self.generate_entity_child_link_functions();
+
+        // link entity enums
+        let child_enum_links = self.generate_entity_enum_link_functions();
+
+        entity_child_links
+            .chain(child_enum_links)
+            .fold(state_impl, |state_impl, f| state_impl.add_function(f))
+    }
+
+    fn generate_entity_child_link_functions(&self) -> impl Iterator<Item=Function> + '_ {
+        self.entities
+            .iter()
+            .flat_map(|e| e.children.iter().map(move |c| (e, c)))
+            .map(move |(e, c)| {
+                let parent = e.base.as_field_name();
+                let child = c.as_field_name();
+                Function::new(&format!("link_{}_to_{}", &parent, &child))
+                    .with_parameters(&format!(
+                        "&mut self, {p}: &{p_id}, {c}: &{c_id}",
+                        p=&parent,
+                        p_id=self.get_valid_id(&e.base),
+                        c=&child,
+                        c_id=self.get_valid_id(c),
+                    ))
+                    .add_line(CodeLine::new(0, &format!(
+                        "self.{p}.{c}.insert({p}, {c}.id().into());",
+                        p=&parent,
+                        c=&child,
+                    )))
+                    .add_line(CodeLine::new(0, &format!(
+                        "self.{c}.{p}.insert({c}, {p}.id());",
+                        p=&parent,
+                        c=&child,
+                    )))
+            })
+    }
+
+    fn generate_entity_enum_link_functions(&self) -> impl Iterator<Item=Function> + '_ {
+        self.entities
+            .iter()
+            .flat_map(move |e| {
+                e.enums.iter().flat_map(move |ent_enum| {
+                    ent_enum.options.iter().map(move |c| (e, ent_enum, c))
+                })
+            })
+            .map(move |(e, ent_enum, c)| {
+                let parent = e.base.as_field_name();
+                let child = c.as_field_name();
+
+                Function::new(&format!("link_{}_to_{}", &parent, &child))
+                    .with_parameters(&format!(
+                        "&mut self, {p}: &{p_id}, {c}: &{c_id}",
+                        p=&parent,
+                        p_id=self.get_valid_id(&e.base),
+                        c=&child,
+                        c_id=self.get_valid_id(c),
+                    ))
+                    .add_line(CodeLine::new(0, &format!(
+                        "self.{p}.{e}.insert({p}, {c}.id().into());",
+                        p=&parent,
+                        e=ent_enum.name.into_snake_case(),
+                        c=&child,
+                    )))
+                    .add_line(CodeLine::new(0, &format!(
+                        "self.{c}.{p}.insert({c}, {p}.id());",
+                        p=&parent,
+                        c=&child,
+                    )))
+            })
     }
 
     pub(crate) fn generate_arena_row(&self, arena: &ArenaCore) -> Struct {

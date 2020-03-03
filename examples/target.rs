@@ -1,5 +1,5 @@
-use generative_ecs_2::ecs::*;
 use physics::*;
+use generative_ecs_2::ecs::*;
 
 #[derive(Debug, Default, Clone)]
 pub struct World {
@@ -14,26 +14,19 @@ impl World {
 
     pub fn create_body(&mut self, entity: BodyEntity) -> Id<Body> {
         let (alloc, state) = self.split();
-
-        let id = alloc.body.create();
-        state.body.insert(&id, entity.body);
-
+        
+        let id = state.body.create(entity.body, &mut alloc.body);
+        
         if let Some(orbit) = entity.orbit {
-            let child_id = alloc.orbit.create();
-            state.orbit.insert(&child_id, orbit);
-
-            state.body.orbit.insert(&id, Some(child_id.id()));
-            state.orbit.body.insert(&child_id, id.id());
+            let orbit = state.orbit.create(orbit, &mut alloc.orbit);
+            state.link_body_to_orbit(&id, &orbit);
         }
-
+        
         if let Some(surface) = entity.surface {
-            let child_id = alloc.surface.create();
-            state.surface.insert(&child_id, surface);
-
-            state.body.surface.insert(&id, Some(child_id.id()));
-            state.surface.body.insert(&child_id, id.id());
+            let surface = state.surface.create(surface, &mut alloc.surface);
+            state.link_body_to_surface(&id, &surface);
         }
-
+        
         id
     }
 
@@ -68,6 +61,7 @@ impl World {
     }
 }
 
+
 #[derive(Debug, Default, Clone)]
 pub struct Allocators {
     pub system: FixedAllocator<System>,
@@ -93,6 +87,19 @@ pub struct State {
     pub transit: Transit,
 }
 
+impl State {
+    pub fn link_body_to_orbit(&mut self, body: &Id<Body>, orbit: &Id<Orbit>) {
+        self.body.orbit.insert(body, orbit.id().into());
+        self.orbit.body.insert(orbit, body.id());
+    }
+
+    pub fn link_body_to_surface(&mut self, body: &Id<Body>, surface: &Id<Surface>) {
+        self.body.surface.insert(body, surface.id().into());
+        self.surface.body.insert(surface, body.id());
+    }
+}
+
+
 #[derive(Debug, Default, Clone)]
 pub struct System {
     pub name: Component<Self, Option<String>>,
@@ -108,15 +115,14 @@ impl System {
         self.temperature.insert(id, row.temperature);
         self.radius.insert(id, row.radius);
     }
+
+    pub fn create<'a>(&mut self, row: SystemRow, alloc: &'a mut FixedAllocator<System>) -> Id<System> {
+        let id = alloc.create();
+        self.insert(&id, row);
+        id
+    }
 }
 
-#[derive(Debug, Clone)]
-pub struct SystemRow {
-    pub name: Option<String>,
-    pub position: Position,
-    pub temperature: Temperature,
-    pub radius: Length,
-}
 
 #[derive(Debug, Default, Clone)]
 pub struct Body {
@@ -141,15 +147,14 @@ impl Body {
         self.orbit.insert(id, None);
         self.surface.insert(id, None);
     }
+
+    pub fn create<'a>(&mut self, row: BodyRow, alloc: &'a mut FixedAllocator<Body>) -> Id<Body> {
+        let id = alloc.create();
+        self.insert(&id, row);
+        id
+    }
 }
 
-#[derive(Debug, Clone)]
-pub struct BodyRow {
-    pub system: Id<System>,
-    pub name: Option<String>,
-    pub mass: Mass,
-    pub radius: Length,
-}
 
 #[derive(Debug, Default, Clone)]
 pub struct Orbit {
@@ -167,14 +172,14 @@ impl Orbit {
         self.radius.insert(id, row.radius);
         self.relative_position.insert(id, Default::default());
     }
+
+    pub fn create<'a>(&mut self, row: OrbitRow, alloc: &'a mut FixedAllocator<Orbit>) -> Id<Orbit> {
+        let id = alloc.create();
+        self.insert(&id, row);
+        id
+    }
 }
 
-#[derive(Debug, Clone)]
-pub struct OrbitRow {
-    pub parent: Option<Id<Orbit>>,
-    pub period: Time,
-    pub radius: Length,
-}
 
 #[derive(Debug, Default, Clone)]
 pub struct Surface {
@@ -190,13 +195,14 @@ impl Surface {
         self.albedo.insert(id, row.albedo);
         self.temperature.insert(id, Default::default());
     }
+
+    pub fn create<'a>(&mut self, row: SurfaceRow, alloc: &'a mut FixedAllocator<Surface>) -> Id<Surface> {
+        let id = alloc.create();
+        self.insert(&id, row);
+        id
+    }
 }
 
-#[derive(Debug, Clone)]
-pub struct SurfaceRow {
-    pub area: Area,
-    pub albedo: Albedo,
-}
 
 #[derive(Debug, Default, Clone)]
 pub struct Nation {
@@ -209,12 +215,14 @@ impl Nation {
         self.name.insert(id, row.name);
         self.population.insert(id, Default::default());
     }
+
+    pub fn create<'a>(&mut self, row: NationRow, alloc: &'a mut GenAllocator<Nation>) -> Valid<'a, Nation> {
+        let id = alloc.create();
+        self.insert(&id, row);
+        id
+    }
 }
 
-#[derive(Debug, Clone)]
-pub struct NationRow {
-    pub name: String,
-}
 
 #[derive(Debug, Default, Clone)]
 pub struct Colony {
@@ -231,15 +239,14 @@ impl Colony {
         self.name.insert(id, row.name);
         self.population.insert(id, row.population);
     }
+
+    pub fn create<'a>(&mut self, row: ColonyRow, alloc: &'a mut GenAllocator<Colony>) -> Valid<'a, Colony> {
+        let id = alloc.create();
+        self.insert(&id, row);
+        id
+    }
 }
 
-#[derive(Debug, Clone)]
-pub struct ColonyRow {
-    pub body: Id<Body>,
-    pub nation: GenId<Nation>,
-    pub name: String,
-    pub population: Population,
-}
 
 #[derive(Debug, Default, Clone)]
 pub struct Vessel {
@@ -254,14 +261,14 @@ impl Vessel {
         self.mass.insert(id, row.mass);
         self.speed.insert(id, row.speed);
     }
+
+    pub fn create<'a>(&mut self, row: VesselRow, alloc: &'a mut GenAllocator<Vessel>) -> Valid<'a, Vessel> {
+        let id = alloc.create();
+        self.insert(&id, row);
+        id
+    }
 }
 
-#[derive(Debug, Clone)]
-pub struct VesselRow {
-    pub name: String,
-    pub mass: Mass,
-    pub speed: Speed,
-}
 
 #[derive(Debug, Default, Clone)]
 pub struct Transit {
@@ -282,6 +289,62 @@ impl Transit {
         self.to.insert(id, row.to);
         self.position.insert(id, Default::default());
     }
+
+    pub fn create<'a>(&mut self, row: TransitRow, alloc: &'a mut GenAllocator<Transit>) -> Valid<'a, Transit> {
+        let id = alloc.create();
+        self.insert(&id, row);
+        id
+    }
+}
+
+
+#[derive(Debug, Clone)]
+pub struct SystemRow {
+    pub name: Option<String>,
+    pub position: Position,
+    pub temperature: Temperature,
+    pub radius: Length,
+}
+
+#[derive(Debug, Clone)]
+pub struct BodyRow {
+    pub system: Id<System>,
+    pub name: Option<String>,
+    pub mass: Mass,
+    pub radius: Length,
+}
+
+#[derive(Debug, Clone)]
+pub struct OrbitRow {
+    pub parent: Option<Id<Orbit>>,
+    pub period: Time,
+    pub radius: Length,
+}
+
+#[derive(Debug, Clone)]
+pub struct SurfaceRow {
+    pub area: Area,
+    pub albedo: Albedo,
+}
+
+#[derive(Debug, Clone)]
+pub struct NationRow {
+    pub name: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct ColonyRow {
+    pub body: Id<Body>,
+    pub nation: GenId<Nation>,
+    pub name: String,
+    pub population: Population,
+}
+
+#[derive(Debug, Clone)]
+pub struct VesselRow {
+    pub name: String,
+    pub mass: Mass,
+    pub speed: Speed,
 }
 
 #[derive(Debug, Clone)]
@@ -299,6 +362,7 @@ pub struct BodyEntity {
     pub orbit: Option<OrbitRow>,
     pub surface: Option<SurfaceRow>,
 }
+
 
 #[derive(Debug, Default, Copy, Clone)]
 pub struct Population;
@@ -390,3 +454,4 @@ impl BodyPosition {
             })
     }
 }
+
