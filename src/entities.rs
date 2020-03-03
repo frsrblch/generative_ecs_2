@@ -189,12 +189,37 @@ impl EntityEnum {
                 let arena_id = world.get_id(o);
                 id_enum.add_option(EnumOption::new(o.as_str(), vec![&arena_id.to_string()]))
             });
-        
+
+        let enum_traits: Vec<TraitImpl> = self
+            .options
+            .iter()
+            .map(|opt| {
+                Self::from_trait()
+                    .impl_for(&typ)
+                    .add_function(
+                        Self::from_trait_function()
+                            .with_parameters(&format!("value: {}", world.get_id(opt)))
+                            .add_line(CodeLine::new(0, &format!("{}::{}(value)", typ, opt))))
+            })
+            .collect();
+
         EnumType {
             base,
             enum_impl: None,
-            enum_traits: vec![]
+            enum_traits
         }
+    }
+
+    fn from_trait() -> Trait {
+        Trait::new("From")
+            .with_generics(Generics::one("T"))
+            .add_function_definition(Self::from_trait_function())
+    }
+
+    fn from_trait_function() -> TraitFunction {
+        TraitFunction::new("from")
+            .with_parameters("value: T")
+            .with_return("Self")
     }
 
     fn id_derives() -> Derives {
