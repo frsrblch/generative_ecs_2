@@ -8,6 +8,7 @@ use std::fmt::*;
 use std::str::FromStr;
 
 // TODO EntityEnum: add state transition functions
+// TODO add delete function for transient entities
 
 #[derive(Debug, Default)]
 pub struct World {
@@ -203,7 +204,7 @@ impl World {
             .with_return(self.get_valid_id(&entity.base).to_string())
             .add_line(CodeLine::new(0, "let (alloc, state) = self.split();"))
             .add_line(CodeLine::new(0, ""))
-            .add_line(CodeLine::new(0, &format!("let id = state.{e}.create(entity.{e}, &mut alloc.{e});", e = e)));
+            .add_line(CodeLine::new(0, &format!("let id = state.{e}.create(entity.{e}, &mut alloc.{e});\n", e = e)));
 
         let func = entity
             .children
