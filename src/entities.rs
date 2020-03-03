@@ -194,11 +194,13 @@ impl EntityEnum {
             .options
             .iter()
             .map(|opt| {
+                let id = world.get_id(opt);
                 Self::from_trait()
                     .impl_for(&typ)
+                    .with_generics(Generics::one(&id.to_string()))
                     .add_function(
                         Self::from_trait_function()
-                            .with_parameters(&format!("value: {}", world.get_id(opt)))
+                            .with_parameters(&format!("value: {}", id))
                             .add_line(CodeLine::new(0, &format!("{}::{}(value)", typ, opt))))
             })
             .collect();
