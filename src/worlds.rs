@@ -7,8 +7,7 @@ use std::collections::HashMap;
 use std::fmt::*;
 use std::str::FromStr;
 
-// TODO move create function to Arena, taking &mut to the allocator
-// TODO add State::link_PARENT_to_CHILD functions for entities
+// TODO EntityEnum: add state transition functions
 
 #[derive(Debug, Default)]
 pub struct World {
