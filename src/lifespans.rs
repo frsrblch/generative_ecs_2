@@ -5,6 +5,7 @@ pub trait Lifespan: Default {
     fn id_type(arena: &ArenaName) -> Type;
     fn valid_id_type(arena: &ArenaName) -> Type;
     fn allocator(arena: &ArenaName) -> Type;
+    fn is_deletable() -> bool;
 }
 
 #[derive(Debug, Default)]
@@ -22,6 +23,8 @@ impl Lifespan for Permanent {
     fn allocator(arena: &ArenaName) -> Type {
         format!("FixedAllocator<{}>", arena).parse().unwrap()
     }
+
+    fn is_deletable() -> bool { false }
 }
 
 #[derive(Debug, Default)]
@@ -39,4 +42,6 @@ impl Lifespan for Transient {
     fn allocator(arena: &ArenaName) -> Type {
         format!("GenAllocator<{}>", arena).parse().unwrap()
     }
+
+    fn is_deletable() -> bool { true }
 }

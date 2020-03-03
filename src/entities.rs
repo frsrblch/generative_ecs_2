@@ -249,8 +249,11 @@ mod tests {
 
     #[test]
     fn simple_enum() {
-        let mut parent = Arena::<Permanent>::new("Fleet");
+        let mut parent = Arena::<Transient>::new("Fleet");
         parent.add_required_component_with_field("ships", "u16");
+
+        let mut engine = Arena::<Transient>::new("Engine");
+        engine.add_required_component("Thrust");
 
         let mut orbit = Arena::<Transient>::new("FleetOrbit");
         orbit.add_required_component_with_field("period", "Time");
@@ -259,10 +262,8 @@ mod tests {
         transit.add_required_component_with_field("arrival", "Time");
 
         let mut parent_entity = Entity::new(&parent);
-
-        // enum
-        let states = EntityEnum::new("FleetLocation", vec![&orbit, &transit]);
-        parent_entity.add_enum(states);
+        parent_entity.add_child(&engine);
+        parent_entity.add_enum(EntityEnum::new("FleetLocation", vec![&orbit, &transit]));
 
         // // child
         // parent_entity.add_child(&orbit);
@@ -271,6 +272,7 @@ mod tests {
         let mut world = World::default();
 
         world.insert_arena(parent);
+        world.insert_arena(engine);
         world.insert_arena(orbit);
         world.insert_arena(transit);
 

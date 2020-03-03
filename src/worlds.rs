@@ -3,7 +3,7 @@ use crate::entities::{Entity, EntityCore};
 use crate::lifespans::*;
 use code_gen::Visibility::Pub;
 use code_gen::*;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::*;
 use std::str::FromStr;
 
@@ -18,6 +18,7 @@ pub struct World {
     pub arenas: Vec<ArenaCore>,
     pub entities: Vec<EntityCore>,
 
+    pub deletable_entities: HashSet<ArenaName>,
     pub allocator: HashMap<ArenaName, Type>,
     pub id: HashMap<ArenaName, Type>,
     pub valid_id: HashMap<ArenaName, Type>,
@@ -116,6 +117,10 @@ impl World {
             );
         }
 
+        if L::is_deletable() {
+            self.deletable_entities.insert(entity.entity.base.clone());
+        }
+
         self.entities.push(entity.entity);
     }
 
@@ -137,17 +142,23 @@ impl World {
     pub fn generate_world_impl(&self) -> Impl {
         let world_impl = Impl::new(WORLD).add_function(Self::get_split_function());
 
-        let entity_methods = self
+        let entity_create_methods = self
             .entities
             .iter()
-            .map(|e| self.generate_entity_function(e));
+            .map(|e| self.generate_create_entity_function(e));
+
+        let entity_delete_methods = self
+            .entities
+            .iter()
+            .flat_map(|e| self.generate_delete_entity_function(e));
 
         let arena_functions = self
             .arenas
             .iter()
             .filter_map(|a| self.generate_non_entity_arena_function(a));
 
-        entity_methods
+        entity_create_methods
+            .chain(entity_delete_methods)
             .chain(arena_functions)
             .fold(world_impl, |world, f| world.add_function(f))
     }
@@ -196,7 +207,7 @@ impl World {
         func.into()
     }
 
-    fn generate_entity_function(&self, entity: &EntityCore) -> Function {
+    fn generate_create_entity_function(&self, entity: &EntityCore) -> Function {
         let e = entity.base.as_field_name();
 
         let func = Function::new(&format!("create_{}", entity.base.as_field_name()))
@@ -238,6 +249,47 @@ impl World {
 
         func.add_line(CodeLine::new(0, ""))
             .add_line(CodeLine::new(0, "id"))
+    }
+
+    fn generate_delete_entity_function(&self, entity: &EntityCore) -> Option<Function> {
+        if !self.deletable_entities.contains(&entity.base) {
+            return None;
+        }
+
+        let e = entity.base.as_field_name();
+
+        let func = Function::new(&format!("delete_{}", entity.base.as_field_name()))
+            .with_parameters(&format!("&mut self, id: {}", self.get_id(&entity.base)))
+            .add_line(CodeLine::new(0, "let (alloc, state) = self.split();\n"))
+            .add_line(CodeLine::new(0, &format!("if let Some(id) = alloc.{e}.validate(id) {{", e=e)));
+
+        let func = entity.children.iter().fold(func, |func, child| {
+            let c = child.as_field_name();
+            func.add_line(CodeLine::new(1, &format!("if let Some(child) = state.{e}.{c}.get_opt(&id) {{", e=e, c=c)))
+                .add_line(CodeLine::new(2, &format!("alloc.{c}.kill(*child);", c=c)))
+                .add_line(CodeLine::new(1, "}"))
+        });
+
+        let func = entity.enums.iter().fold(func, |func, entity_enum| {
+            let ee = entity_enum.name.into_snake_case();
+            let func = func.add_line(CodeLine::new(1, &format!("match state.{e}.{ee}.get(&id) {{", e=e, ee=ee)));
+
+            entity_enum.options.iter()
+                .fold(func, |func, opt| {
+                    func.add_line(CodeLine::new(2, &format!(
+                        "Some({enum_name}::{opt}(child)) => alloc.{o}.kill(*child),",
+                        enum_name=entity_enum.name,
+                        opt=opt,
+                        o=opt.as_field_name(),
+                    )))
+                })
+                .add_line(CodeLine::new(2, "None => {},"))
+                .add_line(CodeLine::new(1, "}"))
+        });
+
+        func.add_line(CodeLine::new(0, "}\n"))
+            .add_line(CodeLine::new(0, &format!("alloc.{e}.kill(id);", e=e)))
+            .into()
     }
 
     pub fn generate_allocators(&self) -> Struct {

@@ -1,5 +1,5 @@
 use generative_ecs_2::arenas::Arena;
-use generative_ecs_2::entities::Entity;
+use generative_ecs_2::entities::{Entity, EntityEnum};
 use generative_ecs_2::lifespans::*;
 use generative_ecs_2::worlds::World;
 
@@ -147,17 +147,27 @@ pub fn get_world() -> World {
     vessel.add_required_component("Mass");
     vessel.add_required_component("Speed");
 
-    let mut transit = Arena::<Transient>::new("Transit");
-    transit.add_required_component_with_field("departure", "Time");
-    transit.add_required_component_with_field("arrival", "Time");
-    transit.add_default_component("Position");
-    transit.add_reference(&vessel);
-    transit.add_reference_with_field("from", &body);
-    transit.add_reference_with_field("to", &body);
+    let mut engine = Arena::<Transient>::new("Engine");
+    engine.add_required_component_with_field("thrust", "Force");
+
+    let mut vessel_transit = Arena::<Transient>::new("VesselTransit");
+    vessel_transit.add_required_component_with_field("departure", "Time");
+    vessel_transit.add_required_component_with_field("arrival", "Time");
+    vessel_transit.add_default_component("Position");
+    vessel_transit.add_reference_with_field("from", &body);
+    vessel_transit.add_reference_with_field("to", &body);
+
+    let mut vessel_orbit = Arena::<Transient>::new("VesselOrbit");
+    vessel_orbit.add_optional_reference_with_field("parent", &body);
+    vessel_orbit.add_required_component_with_field("period", "Time");
 
     let mut planet = Entity::new(&body);
     planet.add_child(&orbit);
     planet.add_child(&surface);
+
+    let mut vessel_entity = Entity::new(&vessel);
+    vessel_entity.add_child(&engine);
+    vessel_entity.add_enum(EntityEnum::new("VesselLocation", vec![&vessel_orbit, &vessel_transit]));
 
     let mut world = World::new();
 
@@ -172,9 +182,12 @@ pub fn get_world() -> World {
     world.insert_arena(nation);
     world.insert_arena(colony);
     world.insert_arena(vessel);
-    world.insert_arena(transit);
+    world.insert_arena(engine);
+    world.insert_arena(vessel_transit);
+    world.insert_arena(vessel_orbit);
 
     world.insert_entity(planet);
+    world.insert_entity(vessel_entity);
 
     world
 }

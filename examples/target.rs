@@ -16,6 +16,7 @@ impl World {
         let (alloc, state) = self.split();
         
         let id = state.body.create(entity.body, &mut alloc.body);
+
         
         if let Some(orbit) = entity.orbit {
             let orbit = state.orbit.create(orbit, &mut alloc.orbit);
@@ -28,6 +29,47 @@ impl World {
         }
         
         id
+    }
+
+    pub fn create_vessel(&mut self, entity: VesselEntity) -> Valid<Vessel> {
+        let (alloc, state) = self.split();
+        
+        let id = state.vessel.create(entity.vessel, &mut alloc.vessel);
+
+        
+        if let Some(engine) = entity.engine {
+            let engine = state.engine.create(engine, &mut alloc.engine);
+            state.link_vessel_to_engine(&id, &engine);
+        }
+        match entity.vessel_location {
+            VesselLocationRow::VesselOrbit(row) => {
+                let vessel_orbit = state.vessel_orbit.create(row, &mut alloc.vessel_orbit);
+                state.link_vessel_to_vessel_orbit(&id, &vessel_orbit);
+            }
+            VesselLocationRow::VesselTransit(row) => {
+                let vessel_transit = state.vessel_transit.create(row, &mut alloc.vessel_transit);
+                state.link_vessel_to_vessel_transit(&id, &vessel_transit);
+            }
+        }
+        
+        id
+    }
+
+    pub fn delete_vessel(&mut self, id: GenId<Vessel>) {
+        let (alloc, state) = self.split();
+
+        if let Some(id) = alloc.vessel.validate(id) {
+            if let Some(child) = state.vessel.engine.get_opt(&id) {
+                alloc.engine.kill(*child);
+            }
+            match state.vessel.vessel_location.get(&id) {
+                Some(VesselLocation::VesselOrbit(child)) => alloc.vessel_orbit.kill(*child),
+                Some(VesselLocation::VesselTransit(child)) => alloc.vessel_transit.kill(*child),
+                None => {},
+            }
+        }
+
+        alloc.vessel.kill(id);
     }
 
     pub fn create_system(&mut self, row: SystemRow) -> Id<System> {
@@ -47,18 +89,6 @@ impl World {
         self.state.colony.insert(&id, row);
         id
     }
-
-    pub fn create_vessel(&mut self, row: VesselRow) -> Valid<Vessel> {
-        let id = self.allocators.vessel.create();
-        self.state.vessel.insert(&id, row);
-        id
-    }
-
-    pub fn create_transit(&mut self, row: TransitRow) -> Valid<Transit> {
-        let id = self.allocators.transit.create();
-        self.state.transit.insert(&id, row);
-        id
-    }
 }
 
 
@@ -71,7 +101,9 @@ pub struct Allocators {
     pub nation: GenAllocator<Nation>,
     pub colony: GenAllocator<Colony>,
     pub vessel: GenAllocator<Vessel>,
-    pub transit: GenAllocator<Transit>,
+    pub engine: GenAllocator<Engine>,
+    pub vessel_transit: GenAllocator<VesselTransit>,
+    pub vessel_orbit: GenAllocator<VesselOrbit>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -84,7 +116,9 @@ pub struct State {
     pub nation: Nation,
     pub colony: Colony,
     pub vessel: Vessel,
-    pub transit: Transit,
+    pub engine: Engine,
+    pub vessel_transit: VesselTransit,
+    pub vessel_orbit: VesselOrbit,
 }
 
 impl State {
@@ -96,6 +130,21 @@ impl State {
     pub fn link_body_to_surface(&mut self, body: &Id<Body>, surface: &Id<Surface>) {
         self.body.surface.insert(body, surface.id().into());
         self.surface.body.insert(surface, body.id());
+    }
+
+    pub fn link_vessel_to_engine(&mut self, vessel: &Valid<Vessel>, engine: &Valid<Engine>) {
+        self.vessel.engine.insert(vessel, engine.id().into());
+        self.engine.vessel.insert(engine, vessel.id());
+    }
+
+    pub fn link_vessel_to_vessel_orbit(&mut self, vessel: &Valid<Vessel>, vessel_orbit: &Valid<VesselOrbit>) {
+        self.vessel.vessel_location.insert(vessel, vessel_orbit.id().into());
+        self.vessel_orbit.vessel.insert(vessel_orbit, vessel.id());
+    }
+
+    pub fn link_vessel_to_vessel_transit(&mut self, vessel: &Valid<Vessel>, vessel_transit: &Valid<VesselTransit>) {
+        self.vessel.vessel_location.insert(vessel, vessel_transit.id().into());
+        self.vessel_transit.vessel.insert(vessel_transit, vessel.id());
     }
 }
 
@@ -253,6 +302,8 @@ pub struct Vessel {
     pub name: Component<Self, String>,
     pub mass: Component<Self, Mass>,
     pub speed: Component<Self, Speed>,
+    pub vessel_location: Component<Self, VesselLocation>,
+    pub engine: Component<Self, Option<GenId<Engine>>>,
 }
 
 impl Vessel {
@@ -260,6 +311,7 @@ impl Vessel {
         self.name.insert(id, row.name);
         self.mass.insert(id, row.mass);
         self.speed.insert(id, row.speed);
+        self.engine.insert(id, None);
     }
 
     pub fn create<'a>(&mut self, row: VesselRow, alloc: &'a mut GenAllocator<Vessel>) -> Valid<'a, Vessel> {
@@ -271,26 +323,65 @@ impl Vessel {
 
 
 #[derive(Debug, Default, Clone)]
-pub struct Transit {
+pub struct Engine {
+    pub vessel: Component<Self, GenId<Vessel>>,
+    pub thrust: Component<Self, Force>,
+}
+
+impl Engine {
+    pub fn insert(&mut self, id: &Valid<Engine>, row: EngineRow) {
+        self.thrust.insert(id, row.thrust);
+    }
+
+    pub fn create<'a>(&mut self, row: EngineRow, alloc: &'a mut GenAllocator<Engine>) -> Valid<'a, Engine> {
+        let id = alloc.create();
+        self.insert(&id, row);
+        id
+    }
+}
+
+
+#[derive(Debug, Default, Clone)]
+pub struct VesselTransit {
+    pub vessel: Component<Self, GenId<Vessel>>,
     pub departure: Component<Self, Time>,
     pub arrival: Component<Self, Time>,
     pub position: Component<Self, Position>,
-    pub vessel: Component<Self, GenId<Vessel>>,
     pub from: Component<Self, Id<Body>>,
     pub to: Component<Self, Id<Body>>,
 }
 
-impl Transit {
-    pub fn insert(&mut self, id: &Valid<Transit>, row: TransitRow) {
+impl VesselTransit {
+    pub fn insert(&mut self, id: &Valid<VesselTransit>, row: VesselTransitRow) {
         self.departure.insert(id, row.departure);
         self.arrival.insert(id, row.arrival);
-        self.vessel.insert(id, row.vessel);
         self.from.insert(id, row.from);
         self.to.insert(id, row.to);
         self.position.insert(id, Default::default());
     }
 
-    pub fn create<'a>(&mut self, row: TransitRow, alloc: &'a mut GenAllocator<Transit>) -> Valid<'a, Transit> {
+    pub fn create<'a>(&mut self, row: VesselTransitRow, alloc: &'a mut GenAllocator<VesselTransit>) -> Valid<'a, VesselTransit> {
+        let id = alloc.create();
+        self.insert(&id, row);
+        id
+    }
+}
+
+
+#[derive(Debug, Default, Clone)]
+pub struct VesselOrbit {
+    pub vessel: Component<Self, GenId<Vessel>>,
+    pub parent: Component<Self, Option<Id<Body>>>,
+    pub period: Component<Self, Time>,
+}
+
+impl VesselOrbit {
+    pub fn insert(&mut self, id: &Valid<VesselOrbit>, row: VesselOrbitRow) {
+        self.parent.insert(id, row.parent);
+        self.period.insert(id, row.period);
+    }
+
+    pub fn create<'a>(&mut self, row: VesselOrbitRow, alloc: &'a mut GenAllocator<VesselOrbit>) -> Valid<'a, VesselOrbit> {
         let id = alloc.create();
         self.insert(&id, row);
         id
@@ -348,12 +439,22 @@ pub struct VesselRow {
 }
 
 #[derive(Debug, Clone)]
-pub struct TransitRow {
+pub struct EngineRow {
+    pub thrust: Force,
+}
+
+#[derive(Debug, Clone)]
+pub struct VesselTransitRow {
     pub departure: Time,
     pub arrival: Time,
-    pub vessel: GenId<Vessel>,
     pub from: Id<Body>,
     pub to: Id<Body>,
+}
+
+#[derive(Debug, Clone)]
+pub struct VesselOrbitRow {
+    pub parent: Option<Id<Body>>,
+    pub period: Time,
 }
 
 #[derive(Debug, Clone)]
@@ -361,6 +462,40 @@ pub struct BodyEntity {
     pub body: BodyRow,
     pub orbit: Option<OrbitRow>,
     pub surface: Option<SurfaceRow>,
+}
+
+
+#[derive(Debug, Clone)]
+pub struct VesselEntity {
+    pub vessel: VesselRow,
+    pub engine: Option<EngineRow>,
+    pub vessel_location: VesselLocationRow,
+}
+
+
+#[derive(Debug, Clone)]
+pub enum VesselLocationRow {
+    VesselOrbit(VesselOrbitRow),
+    VesselTransit(VesselTransitRow),
+}
+
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum VesselLocation {
+    VesselOrbit(GenId<VesselOrbit>),
+    VesselTransit(GenId<VesselTransit>),
+}
+
+impl From<GenId<VesselOrbit>> for VesselLocation {
+    fn from(value: GenId<VesselOrbit>) -> Self {
+        VesselLocation::VesselOrbit(value)
+    }
+}
+
+impl From<GenId<VesselTransit>> for VesselLocation {
+    fn from(value: GenId<VesselTransit>) -> Self {
+        VesselLocation::VesselTransit(value)
+    }
 }
 
 
