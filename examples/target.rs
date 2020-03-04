@@ -17,16 +17,16 @@ impl World {
         
         let id = state.body.create(entity.body, &mut alloc.body);
 
-        
         if let Some(orbit) = entity.orbit {
             let orbit = state.orbit.create(orbit, &mut alloc.orbit);
             state.link_body_to_orbit(&id, &orbit);
         }
-        
+
         if let Some(surface) = entity.surface {
             let surface = state.surface.create(surface, &mut alloc.surface);
             state.link_body_to_surface(&id, &surface);
         }
+
         
         id
     }
@@ -36,11 +36,11 @@ impl World {
         
         let id = state.vessel.create(entity.vessel, &mut alloc.vessel);
 
-        
         if let Some(engine) = entity.engine {
             let engine = state.engine.create(engine, &mut alloc.engine);
             state.link_vessel_to_engine(&id, &engine);
         }
+
         match entity.vessel_location {
             VesselLocationRow::VesselOrbit(row) => {
                 let vessel_orbit = state.vessel_orbit.create(row, &mut alloc.vessel_orbit);
@@ -62,6 +62,7 @@ impl World {
             if let Some(child) = state.vessel.engine.get_opt(&id) {
                 alloc.engine.kill(*child);
             }
+
             match state.vessel.vessel_location.get(&id) {
                 Some(VesselLocation::VesselOrbit(child)) => alloc.vessel_orbit.kill(*child),
                 Some(VesselLocation::VesselTransit(child)) => alloc.vessel_transit.kill(*child),

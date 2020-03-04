@@ -224,11 +224,10 @@ impl World {
             .fold(func, |func, child| {
                 let c = child.name.as_field_name();
 
-                func.add_line(CodeLine::new(0, ""))
-                    .add_line(CodeLine::new(0, &format!("if let Some({c}) = entity.{c} {{", c=c)))
+                func.add_line(CodeLine::new(0, &format!("if let Some({c}) = entity.{c} {{", c=c)))
                     .add_line(CodeLine::new(1, &format!("let {c} = state.{c}.create({c}, &mut alloc.{c});", c=c)))
                     .add_line(CodeLine::new(1, &format!("state.link_{e}_to_{c}(&id, &{c});", e=e, c=c)))
-                    .add_line(CodeLine::new(0, "}"))
+                    .add_line(CodeLine::new(0, "}\n"))
             });
 
         let func = entity
@@ -267,14 +266,14 @@ impl World {
             let c = child.as_field_name();
             func.add_line(CodeLine::new(1, &format!("if let Some(child) = state.{e}.{c}.get_opt(&id) {{", e=e, c=c)))
                 .add_line(CodeLine::new(2, &format!("alloc.{c}.kill(*child);", c=c)))
-                .add_line(CodeLine::new(1, "}"))
+                .add_line(CodeLine::new(1, "}\n"))
         });
 
         let func = entity.enums.iter().fold(func, |func, entity_enum| {
             let ee = entity_enum.name.into_snake_case();
             let func = func.add_line(CodeLine::new(1, &format!("match state.{e}.{ee}.get(&id) {{", e=e, ee=ee)));
 
-            entity_enum.options.iter()
+            let func = entity_enum.options.iter()
                 .fold(func, |func, opt| {
                     func.add_line(CodeLine::new(2, &format!(
                         "Some({enum_name}::{opt}(child)) => alloc.{o}.kill(*child),",
@@ -282,8 +281,9 @@ impl World {
                         opt=opt,
                         o=opt.as_field_name(),
                     )))
-                })
-                .add_line(CodeLine::new(2, "None => {},"))
+                });
+
+            func.add_line(CodeLine::new(2, "None => {},"))
                 .add_line(CodeLine::new(1, "}"))
         });
 
