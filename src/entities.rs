@@ -246,6 +246,7 @@ impl EntityEnum {
 mod tests {
     use super::*;
     use crate::prelude::{World};
+    use crate::worlds::Insert;
 
     #[test]
     fn simple_enum() {
@@ -271,12 +272,12 @@ mod tests {
 
         let mut world = World::default();
 
-        world.insert_arena(parent);
-        world.insert_arena(engine);
-        world.insert_arena(orbit);
-        world.insert_arena(transit);
+        world.insert(parent);
+        world.insert(engine);
+        world.insert(orbit);
+        world.insert(transit);
 
-        world.insert_entity(parent_entity);
+        world.insert(parent_entity);
 
 
         println!("{}", world);

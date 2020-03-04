@@ -1,7 +1,7 @@
 use generative_ecs_2::arenas::Arena;
 use generative_ecs_2::entities::{Entity, EntityEnum};
 use generative_ecs_2::lifespans::*;
-use generative_ecs_2::worlds::World;
+use generative_ecs_2::worlds::{World, Insert};
 
 // cargo run --example gen && cargo check --example target
 
@@ -175,19 +175,19 @@ pub fn get_world() -> World {
 
     world.use_statements.push("use physics::*;".to_string());
 
-    world.insert_arena(system);
-    world.insert_arena(body);
-    world.insert_arena(orbit);
-    world.insert_arena(surface);
-    world.insert_arena(nation);
-    world.insert_arena(colony);
-    world.insert_arena(vessel);
-    world.insert_arena(engine);
-    world.insert_arena(vessel_transit);
-    world.insert_arena(vessel_orbit);
+    world.insert(system);
+    world.insert(body);
+    world.insert(orbit);
+    world.insert(surface);
+    world.insert(nation);
+    world.insert(colony);
+    world.insert(vessel);
+    world.insert(engine);
+    world.insert(vessel_transit);
+    world.insert(vessel_orbit);
 
-    world.insert_entity(planet);
-    world.insert_entity(vessel_entity);
+    world.insert(planet);
+    world.insert(vessel_entity);
 
     world
 }

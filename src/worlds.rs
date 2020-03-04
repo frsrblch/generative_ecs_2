@@ -24,6 +24,53 @@ pub struct World {
     pub valid_id: HashMap<ArenaName, Type>,
 }
 
+pub trait Insert<T> {
+    fn insert(&mut self, value: T);
+}
+
+impl<L: Lifespan> Insert<Arena<L>> for World {
+    fn insert(&mut self, arena: Arena<L>) {
+        if self.contains_arena(&arena.arena.name) {
+            panic!(format!("Duplicate arena name: {}", arena.arena.name));
+        }
+
+        self.allocator.insert(arena.name(), arena.allocator());
+
+        self.id.insert(arena.name(), arena.id_type());
+
+        self.valid_id.insert(arena.name(), arena.valid_id_type());
+
+        self.arenas.push(arena.arena);
+    }
+}
+
+impl Insert<Entity<Transient>> for World {
+    fn insert(&mut self, entity: Entity<Transient>) {
+        if !entity.get_arenas().all(|a| self.contains_arena(a)) {
+            panic!(
+                "Arena must be inserted before Entity: {}",
+                entity.entity.base
+            );
+        }
+
+        self.deletable_entities.insert(entity.entity.base.clone());
+        self.entities.push(entity.entity);
+    }
+}
+
+impl Insert<Entity<Permanent>> for World {
+    fn insert(&mut self, entity: Entity<Permanent>) {
+        if !entity.get_arenas().all(|a| self.contains_arena(a)) {
+            panic!(
+                "Arena must be inserted before Entity: {}",
+                entity.entity.base
+            );
+        }
+
+        self.entities.push(entity.entity);
+    }
+}
+
 impl Display for World {
     fn fmt(&self, f: &mut Formatter) -> Result {
         for u in self.use_statements.iter() {
@@ -93,35 +140,6 @@ impl World {
         };
 
         self.fields.push(field);
-    }
-
-    pub fn insert_arena<L: Lifespan>(&mut self, arena: Arena<L>) {
-        if self.contains_arena(&arena.arena.name) {
-            panic!(format!("Duplicate arena name: {}", arena.arena.name));
-        }
-
-        self.allocator.insert(arena.name(), arena.allocator());
-
-        self.id.insert(arena.name(), arena.id_type());
-
-        self.valid_id.insert(arena.name(), arena.valid_id_type());
-
-        self.arenas.push(arena.arena);
-    }
-
-    pub fn insert_entity<L: Lifespan>(&mut self, entity: Entity<L>) {
-        if !entity.get_arenas().all(|a| self.contains_arena(a)) {
-            panic!(
-                "Arena must be inserted before Entity: {}",
-                entity.entity.base
-            );
-        }
-
-        if L::is_deletable() {
-            self.deletable_entities.insert(entity.entity.base.clone());
-        }
-
-        self.entities.push(entity.entity);
     }
 
     pub fn generate_world(&self) -> StructType {
@@ -715,8 +733,8 @@ pub mod tests {
     #[should_panic]
     fn insert_duplicate_arena() {
         let mut world = World::new();
-        world.insert_arena(Arena::<Permanent>::new("Test"));
-        world.insert_arena(Arena::<Transient>::new("Test"));
+        world.insert(Arena::<Permanent>::new("Test"));
+        world.insert(Arena::<Transient>::new("Test"));
     }
 
     pub fn get_world() -> World {
