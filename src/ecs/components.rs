@@ -3,52 +3,48 @@ use crate::ecs::ids::{Id, Valid};
 use rayon::iter::*;
 use std::marker::PhantomData;
 use std::ops::{Index, IndexMut};
+use simd_vecs::vecs::Vec1;
 
 #[derive(Debug, Clone)]
 pub struct Component<ID, T> {
-    values: Vec<T>,
+    values: Vec1<T>,
     marker: PhantomData<ID>,
 }
 
 impl<ID, T> Default for Component<ID, T> {
     fn default() -> Self {
         Self {
-            values: vec![],
+            values: Vec1::new(),
             marker: PhantomData,
         }
     }
 }
 
 impl<ID, T> Component<ID, T> {
-    fn insert_unchecked(&mut self, index: usize, value: T) {
-        if let Some(val) = self.values.get_mut(index) {
-            *val = value;
-        } else {
-            debug_assert_eq!(index, self.values.len());
-            self.values.push(value);
-        }
+    fn insert(&mut self, index: usize, value: T) {
+        self.values.insert(value, index)
     }
 
     #[inline(always)]
     pub fn iter(&self) -> std::slice::Iter<T> {
-        (&self.values).into_iter()
+        (&self.values.values).into_iter()
     }
 
     #[inline(always)]
     pub fn iter_mut(&mut self) -> std::slice::IterMut<T> {
-        (&mut self.values).into_iter()
+        (&mut self.values.values).into_iter()
     }
 }
 
 impl<ID, T> GetOpt<Id<ID>, T> for Component<ID, Option<T>> {
     #[inline(always)]
     fn get_opt(&self, id: Id<ID>) -> Option<&T> {
-        self.values.get(id.index).and_then(|o| o.as_ref())
+        self.values.values.get(id.index).and_then(|o| o.as_ref())
     }
 
     #[inline(always)]
     fn get_opt_mut(&mut self, id: Id<ID>) -> Option<&mut T> {
-        self.values.get_mut(id.index).and_then(|o| o.as_mut())
+        self.values.values.get_mut(id.index).and_then(|o| o.as_mut())
     }
 }
 
@@ -140,20 +136,20 @@ impl<ID, T> Index<&Id<ID>> for Component<ID, T> {
     type Output = T;
 
     fn index(&self, index: &Id<ID>) -> &Self::Output {
-        &self.values[index.index]
+        &self.values.values[index.index]
     }
 }
 
 impl<ID, T> IndexMut<&Id<ID>> for Component<ID, T> {
     fn index_mut(&mut self, index: &Id<ID>) -> &mut Self::Output {
-        &mut self.values[index.index]
+        &mut self.values.values[index.index]
     }
 }
 
 impl<ID, T> Insert<Id<ID>, T> for Component<ID, T> {
     #[inline(always)]
     fn insert(&mut self, id: &Id<ID>, value: T) {
-        self.insert_unchecked(id.index, value);
+        self.insert(id.index, value);
     }
 }
 
@@ -161,13 +157,13 @@ impl<ID, T> Index<Id<ID>> for Component<ID, T> {
     type Output = T;
 
     fn index(&self, index: Id<ID>) -> &Self::Output {
-        &self.values[index.index]
+        &self.values.values[index.index]
     }
 }
 
 impl<ID, T> IndexMut<Id<ID>> for Component<ID, T> {
     fn index_mut(&mut self, index: Id<ID>) -> &mut Self::Output {
-        &mut self.values[index.index]
+        &mut self.values.values[index.index]
     }
 }
 
@@ -175,13 +171,13 @@ impl<ID, T> Index<&Valid<'_, ID>> for Component<ID, T> {
     type Output = T;
 
     fn index(&self, index: &Valid<ID>) -> &Self::Output {
-        &self.values[index.id.index]
+        &self.values.values[index.id.index]
     }
 }
 
 impl<ID, T> IndexMut<&Valid<'_, ID>> for Component<ID, T> {
     fn index_mut(&mut self, index: &Valid<ID>) -> &mut Self::Output {
-        &mut self.values[index.id.index]
+        &mut self.values.values[index.id.index]
     }
 }
 
@@ -189,20 +185,20 @@ impl<ID, T> Index<Valid<'_, ID>> for Component<ID, T> {
     type Output = T;
 
     fn index(&self, index: Valid<ID>) -> &Self::Output {
-        &self.values[index.id.index]
+        &self.values.values[index.id.index]
     }
 }
 
 impl<ID, T> IndexMut<Valid<'_, ID>> for Component<ID, T> {
     fn index_mut(&mut self, index: Valid<ID>) -> &mut Self::Output {
-        &mut self.values[index.id.index]
+        &mut self.values.values[index.id.index]
     }
 }
 
 impl<ID, T> Insert<Valid<'_, ID>, T> for Component<ID, T> {
     #[inline(always)]
     fn insert(&mut self, id: &Valid<ID>, value: T) {
-        self.insert_unchecked(id.id.index, value);
+        self.insert(id.id.index, value);
     }
 }
 
@@ -212,7 +208,7 @@ impl<'a, ID: Send, T: Send + Sync> IntoParallelIterator for &'a Component<ID, T>
 
     #[inline(always)]
     fn into_par_iter(self) -> Self::Iter {
-        self.values.par_iter()
+        self.values.values.par_iter()
     }
 }
 
@@ -222,7 +218,7 @@ impl<'a, ID: Send, T: Send + Sync> IntoParallelIterator for &'a mut Component<ID
 
     #[inline(always)]
     fn into_par_iter(self) -> Self::Iter {
-        self.values.par_iter_mut()
+        self.values.values.par_iter_mut()
     }
 }
 
@@ -236,8 +232,8 @@ mod tests {
         let mut b = Component::<(), usize>::default();
 
         for i in 0..10 {
-            a.insert_unchecked(i, i);
-            b.insert_unchecked(i, 20 - i);
+            a.insert(i, i);
+            b.insert(i, 20 - i);
         }
 
         a.iter_mut().zip(b.iter()).for_each(|(a, b)| {
@@ -253,8 +249,8 @@ mod tests {
         let mut b = Component::<(), usize>::default();
 
         for i in 0..10 {
-            a.insert_unchecked(i, i);
-            b.insert_unchecked(i, 20 - i);
+            a.insert(i, i);
+            b.insert(i, 20 - i);
         }
 
         a.par_iter_mut().zip(b.par_iter()).for_each(|(a, b)| {
