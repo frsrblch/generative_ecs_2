@@ -21,7 +21,7 @@ impl<ID, T> Default for Component<ID, T> {
 }
 
 impl<ID, T> Component<ID, T> {
-    fn insert(&mut self, index: usize, value: T) {
+    fn insert_at(&mut self, index: usize, value: T) {
         self.values.insert(value, index)
     }
 
@@ -149,7 +149,7 @@ impl<ID, T> IndexMut<&Id<ID>> for Component<ID, T> {
 impl<ID, T> Insert<Id<ID>, T> for Component<ID, T> {
     #[inline(always)]
     fn insert(&mut self, id: &Id<ID>, value: T) {
-        self.insert(id.index, value);
+        self.insert_at(id.index, value);
     }
 }
 
@@ -198,7 +198,7 @@ impl<ID, T> IndexMut<Valid<'_, ID>> for Component<ID, T> {
 impl<ID, T> Insert<Valid<'_, ID>, T> for Component<ID, T> {
     #[inline(always)]
     fn insert(&mut self, id: &Valid<ID>, value: T) {
-        self.insert(id.id.index, value);
+        self.insert_at(id.id.index, value);
     }
 }
 
@@ -232,8 +232,8 @@ mod tests {
         let mut b = Component::<(), usize>::default();
 
         for i in 0..10 {
-            a.insert(i, i);
-            b.insert(i, 20 - i);
+            a.insert_at(i, i);
+            b.insert_at(i, 20 - i);
         }
 
         a.iter_mut().zip(b.iter()).for_each(|(a, b)| {
@@ -249,8 +249,8 @@ mod tests {
         let mut b = Component::<(), usize>::default();
 
         for i in 0..10 {
-            a.insert(i, i);
-            b.insert(i, 20 - i);
+            a.insert_at(i, i);
+            b.insert_at(i, 20 - i);
         }
 
         a.par_iter_mut().zip(b.par_iter()).for_each(|(a, b)| {
